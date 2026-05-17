@@ -1,4 +1,6 @@
-export type Locale = "en" | "zh";
+import type { Locale } from "../shared/types";
+
+export type { Locale };
 
 export type Messages = typeof messages.en;
 

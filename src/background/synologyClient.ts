@@ -6,7 +6,7 @@ import type { ApiError, DestinationOption, DownloadTask, DownloadTaskStatus, Ses
 const AUTH_PATH = "/webapi/auth.cgi";
 const INFO_PATH = "/webapi/DownloadStation/info.cgi";
 const TASK_PATH = "/webapi/DownloadStation/task.cgi";
-const FILE_STATION_SHARE_PATH = "/webapi/FileStation/file_share.cgi";
+const FILE_STATION_SHARE_PATHS = ["/webapi/entry.cgi", "/webapi/FileStation/file_share.cgi"];
 
 type Fetcher = typeof fetch;
 type SynologyResponse<T> = { success: true; data?: T } | { success: false; error?: { code?: number | string } };
@@ -102,15 +102,27 @@ async function listWritableShares(baseUrl: string, username: string, password: s
   try {
     const session = await loginToSession(baseUrl, "FileStation", username, password, fetcher);
     fileStationSid = session.sid;
-    const url = endpoint(baseUrl, FILE_STATION_SHARE_PATH, {
-      api: "SYNO.FileStation.List",
-      version: 2,
-      method: "list_share",
-      onlywritable: "true",
-      _sid: fileStationSid
+    for (const path of FILE_STATION_SHARE_PATHS) {
+      try {
+        const url = endpoint(baseUrl, path, {
+          api: "SYNO.FileStation.List",
+          version: 2,
+          method: "list_share",
+          onlywritable: "true",
+          _sid: fileStationSid
+        });
+        const data = await request<FileStationShareList>(fetcher, url);
+        const shares = normalizeWritableShares(data);
+        debugLog("api", "listed writable shares", { endpoint: path, count: shares.length, destinations: shares });
+        return shares;
+      } catch (error) {
+        debugLog("api", "directory endpoint unavailable", { endpoint: path, error: asDirectoryListError(error) });
+      }
+    }
+    debugLog("api", "directory listing unavailable", {
+      message: "DSM rejected every File Station directory endpoint. Check File Station permission for this DSM account."
     });
-    const data = await request<FileStationShareList>(fetcher, url);
-    return normalizeWritableShares(data);
+    return [];
   } catch (error) {
     debugLog("api", "directory listing unavailable", asDirectoryListError(error));
     return [];

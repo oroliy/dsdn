@@ -27,6 +27,10 @@ export function App() {
 
   useEffect(() => {
     let mounted = true;
+    void sendMessage({ type: "locale.get" }).then((response) => {
+      if (!mounted || !response.ok || !response.data) return;
+      setLocale(response.data);
+    });
     void sendMessage({ type: "settings.get" }).then((response) => {
       if (!mounted) return;
       if (!response.ok || !response.data) {
@@ -41,6 +45,11 @@ export function App() {
       mounted = false;
     };
   }, []);
+
+  function changeLocale(nextLocale: Locale) {
+    setLocale(nextLocale);
+    void sendMessage({ type: "locale.save", locale: nextLocale });
+  }
 
   async function loadTasks() {
     setLoading(true);
@@ -113,7 +122,7 @@ export function App() {
       <main className="popup-shell">
         <div className="toolbar">
           <h1>Download Station</h1>
-          <LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />
+          <LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />
         </div>
         <p className="muted">{t.loading}</p>
       </main>
@@ -128,7 +137,7 @@ export function App() {
           loading={loading}
           error={error}
           onSubmit={saveAndConnect}
-          languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
+          languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
           t={t}
         />
       </main>
@@ -144,7 +153,7 @@ export function App() {
           destinations={destinations}
           onCancel={() => setView("tasks")}
           onCreate={createDownload}
-          languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
+          languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
           t={t}
         />
       </main>
@@ -157,7 +166,7 @@ export function App() {
         <TaskDetail
           task={selectedTask}
           onBack={() => setSelectedTask(null)}
-          languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
+          languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
           t={t}
         />
       </main>
@@ -173,7 +182,7 @@ export function App() {
         onRefresh={loadTasks}
         onAddClick={openAddView}
         onTaskClick={setSelectedTask}
-        languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
+        languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
         t={t}
       />
     </main>

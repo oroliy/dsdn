@@ -4,6 +4,8 @@ export type ConnectionSettings = {
   password: string;
 };
 
+export type Locale = "en" | "zh";
+
 export type SessionState = {
   sid: string;
   createdAt: number;

@@ -1,7 +1,8 @@
-import type { ConnectionSettings, SessionState } from "../shared/types";
+import type { ConnectionSettings, Locale, SessionState } from "../shared/types";
 
 const SETTINGS_KEY = "connectionSettings";
 const SESSION_KEY = "downloadStationSession";
+const LOCALE_KEY = "locale";
 
 type StorageArea = {
   get(key: string): Promise<Record<string, unknown>>;
@@ -37,6 +38,16 @@ export function createStorageAdapter(storage: StorageRoot) {
 
     async clearSession(): Promise<void> {
       await storage.session.remove(SESSION_KEY);
+    },
+
+    async getLocale(): Promise<Locale | null> {
+      const result = await storage.local.get(LOCALE_KEY);
+      const locale = result[LOCALE_KEY];
+      return locale === "en" || locale === "zh" ? locale : null;
+    },
+
+    async saveLocale(locale: Locale): Promise<void> {
+      await storage.local.set({ [LOCALE_KEY]: locale });
     }
   };
 }

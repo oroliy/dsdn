@@ -15,7 +15,7 @@ describe("App", () => {
   });
 
   it("renders setup form when settings are missing", async () => {
-    sendMessage.mockResolvedValueOnce({ ok: true, data: null });
+    sendMessage.mockResolvedValueOnce({ ok: true, data: null }).mockResolvedValueOnce({ ok: true, data: null });
 
     render(<App />);
 
@@ -25,6 +25,7 @@ describe("App", () => {
 
   it("saves settings, connects, and loads tasks", async () => {
     sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({ ok: true, data: null })
@@ -43,7 +44,7 @@ describe("App", () => {
   });
 
   it("shows validation for invalid base url", async () => {
-    sendMessage.mockResolvedValueOnce({ ok: true, data: null });
+    sendMessage.mockResolvedValueOnce({ ok: true, data: null }).mockResolvedValueOnce({ ok: true, data: null });
 
     render(<App />);
 
@@ -55,6 +56,7 @@ describe("App", () => {
 
   it("adds a download and refreshes the task list", async () => {
     sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({
         ok: true,
         data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
@@ -78,6 +80,7 @@ describe("App", () => {
 
   it("opens a task detail view from the task list", async () => {
     sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({
         ok: true,
         data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
@@ -114,8 +117,11 @@ describe("App", () => {
     expect(screen.getAllByText("2.0 KB").length).toBeGreaterThan(0);
   });
 
-  it("switches UI text between English and Chinese", async () => {
-    sendMessage.mockResolvedValueOnce({ ok: true, data: null });
+  it("saves locale changes", async () => {
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null });
 
     render(<App />);
 
@@ -123,7 +129,14 @@ describe("App", () => {
     expect(screen.getByLabelText("Language").closest(".language-icon-select")).not.toBeNull();
     await userEvent.selectOptions(screen.getByLabelText("Language"), "zh");
 
-    expect(screen.getByRole("button", { name: "保存并连接" })).toBeInTheDocument();
-    expect(screen.getByLabelText("语言")).toBeInTheDocument();
+    expect(sendMessage).toHaveBeenCalledWith({ type: "locale.save", locale: "zh" });
+  });
+
+  it("loads the saved locale", async () => {
+    sendMessage.mockResolvedValueOnce({ ok: true, data: "zh" }).mockResolvedValueOnce({ ok: true, data: null });
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue("zh"));
   });
 });

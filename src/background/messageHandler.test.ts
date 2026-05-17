@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createMessageHandler } from "./messageHandler";
-import type { DestinationOption, DownloadTask } from "../shared/types";
+import type { DestinationOption, DownloadTask, Locale } from "../shared/types";
 
 describe("createMessageHandler", () => {
   it("routes settings save and clears existing session", async () => {
@@ -49,6 +49,16 @@ describe("createMessageHandler", () => {
     });
   });
 
+  it("routes locale get and save through local storage", async () => {
+    const deps = fakeDeps();
+    deps.storage.getLocale.mockResolvedValue("zh");
+    const handle = createMessageHandler(deps);
+
+    await expect(handle({ type: "locale.get" })).resolves.toEqual({ ok: true, data: "zh" });
+    await expect(handle({ type: "locale.save", locale: "en" })).resolves.toEqual({ ok: true, data: null });
+    expect(deps.storage.saveLocale).toHaveBeenCalledWith("en");
+  });
+
   it("returns normalized errors for invalid requests", async () => {
     const handle = createMessageHandler(fakeDeps());
 
@@ -66,7 +76,9 @@ function fakeDeps() {
       saveSettings: vi.fn(async () => undefined),
       getSession: vi.fn(async () => null),
       saveSession: vi.fn(async () => undefined),
-      clearSession: vi.fn(async () => undefined)
+      clearSession: vi.fn(async () => undefined),
+      getLocale: vi.fn(async (): Promise<Locale | null> => null),
+      saveLocale: vi.fn(async () => undefined)
     },
     session: {
       connect: vi.fn(async () => undefined),

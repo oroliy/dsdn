@@ -35,6 +35,14 @@ describe("createStorageAdapter", () => {
     await storage.clearSession();
     await expect(storage.getSession()).resolves.toBeNull();
   });
+
+  it("saves and loads locale from local storage", async () => {
+    const storage = createStorageAdapter(fakeChromeStorage());
+
+    await storage.saveLocale("zh");
+
+    await expect(storage.getLocale()).resolves.toBe("zh");
+  });
 });
 
 function fakeChromeStorage(): StorageRoot {

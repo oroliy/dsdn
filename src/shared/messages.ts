@@ -1,6 +1,8 @@
-import type { ApiError, ConnectionSettings, DestinationOption, DownloadTask } from "./types";
+import type { ApiError, ConnectionSettings, DestinationOption, DownloadTask, Locale } from "./types";
 
 export type ExtensionRequest =
+  | { type: "locale.get" }
+  | { type: "locale.save"; locale: Locale }
   | { type: "settings.get" }
   | { type: "settings.save"; settings: ConnectionSettings }
   | { type: "session.connect" }
@@ -12,6 +14,8 @@ export type ExtensionRequest =
 export type ExtensionResponse<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
 export type ExtensionResponseMap = {
+  "locale.get": Locale | null;
+  "locale.save": null;
   "settings.get": ConnectionSettings | null;
   "settings.save": null;
   "session.connect": null;
@@ -22,6 +26,8 @@ export type ExtensionResponseMap = {
 };
 
 const REQUEST_TYPES = new Set<ExtensionRequest["type"]>([
+  "locale.get",
+  "locale.save",
   "settings.get",
   "settings.save",
   "session.connect",

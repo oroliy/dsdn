@@ -159,6 +159,33 @@ describe("createSynologyClient", () => {
     await expect(client.listDestinations("SID123", "user", "pass")).resolves.toEqual([{ value: "Download", label: "Download" }]);
   });
 
+  it("tries the legacy File Station share endpoint when entry.cgi is forbidden", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("method=getconfig")) {
+        return json({ success: true, data: { default_destination: "Download" } });
+      }
+      if (url.includes("session=FileStation") && url.includes("method=login")) {
+        return json({ success: true, data: { sid: "FILE_SID" } });
+      }
+      if (url.includes("/webapi/entry.cgi") && url.includes("method=list_share")) {
+        return { ok: false, status: 403, json: async () => ({}) } as Response;
+      }
+      if (url.includes("/webapi/FileStation/file_share.cgi") && url.includes("method=list_share")) {
+        return json({ success: true, data: { shares: [{ name: "Media", path: "/Media" }] } });
+      }
+      return json({ success: true });
+    });
+    const client = createSynologyClient("https://nas.local:5001", fetcher);
+
+    await expect(client.listDestinations("SID123", "user", "pass")).resolves.toEqual([
+      { value: "Download", label: "Download" },
+      { value: "Media", label: "Media" }
+    ]);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("/webapi/entry.cgi"), undefined);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("/webapi/FileStation/file_share.cgi"), undefined);
+  });
+
   it("creates tasks with an urlencoded POST body", async () => {
     const fetcher = vi.fn(async () => json({ success: true }));
     const client = createSynologyClient("https://nas.local:5001", fetcher);

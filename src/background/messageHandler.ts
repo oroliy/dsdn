@@ -13,6 +13,11 @@ export function createMessageHandler(deps: { storage: StorageAdapter; session: S
       }
 
       switch (request.type) {
+        case "locale.get":
+          return ok(await deps.storage.getLocale());
+        case "locale.save":
+          await deps.storage.saveLocale(request.locale);
+          return ok(null);
         case "settings.get":
           return ok(await deps.storage.getSettings());
         case "settings.save":
