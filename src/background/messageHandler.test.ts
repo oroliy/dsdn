@@ -1,0 +1,79 @@
+import { describe, expect, it, vi } from "vitest";
+import { createMessageHandler } from "./messageHandler";
+import type { DestinationOption, DownloadTask } from "../shared/types";
+
+describe("createMessageHandler", () => {
+  it("routes settings save and clears existing session", async () => {
+    const deps = fakeDeps();
+    const handle = createMessageHandler(deps);
+
+    await expect(
+      handle({
+        type: "settings.save",
+        settings: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+    ).resolves.toEqual({ ok: true, data: null });
+
+    expect(deps.storage.saveSettings).toHaveBeenCalledOnce();
+    expect(deps.storage.clearSession).toHaveBeenCalledOnce();
+  });
+
+  it("routes task list responses", async () => {
+    const deps = fakeDeps();
+    deps.session.listTasks.mockResolvedValue([
+      {
+        id: "1",
+        title: "file",
+        status: "finished",
+        progress: 100,
+        downloadedBytes: 1,
+        uploadedBytes: 0,
+        totalBytes: 1,
+        downloadSpeed: 0,
+        uploadSpeed: 0
+      }
+    ]);
+    const handle = createMessageHandler(deps);
+
+    await expect(handle({ type: "tasks.list" })).resolves.toMatchObject({ ok: true, data: [{ title: "file" }] });
+  });
+
+  it("routes destination list responses", async () => {
+    const deps = fakeDeps();
+    deps.session.listDestinations.mockResolvedValue([{ value: "Download", label: "Download" }]);
+    const handle = createMessageHandler(deps);
+
+    await expect(handle({ type: "destinations.list" })).resolves.toEqual({
+      ok: true,
+      data: [{ value: "Download", label: "Download" }]
+    });
+  });
+
+  it("returns normalized errors for invalid requests", async () => {
+    const handle = createMessageHandler(fakeDeps());
+
+    await expect(handle({ type: "unknown" })).resolves.toEqual({
+      ok: false,
+      error: { code: "invalid_request", message: "Unsupported request.", retryable: false }
+    });
+  });
+});
+
+function fakeDeps() {
+  return {
+    storage: {
+      getSettings: vi.fn(async () => null),
+      saveSettings: vi.fn(async () => undefined),
+      getSession: vi.fn(async () => null),
+      saveSession: vi.fn(async () => undefined),
+      clearSession: vi.fn(async () => undefined)
+    },
+    session: {
+      connect: vi.fn(async () => undefined),
+      disconnect: vi.fn(async () => undefined),
+      listTasks: vi.fn(async (): Promise<DownloadTask[]> => []),
+      listDestinations: vi.fn(async (): Promise<DestinationOption[]> => []),
+      createDownload: vi.fn(async () => ({ created: 1 }))
+    }
+  };
+}
