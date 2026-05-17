@@ -11,6 +11,7 @@ describe("createSynologyClient", () => {
   });
 
   it("normalizes task list responses", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const fetcher = vi.fn(async () =>
       json({
         success: true,
@@ -52,6 +53,21 @@ describe("createSynologyClient", () => {
         createdAt: 1700000000
       }
     ]);
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        [
+          "[Synology Download Station] Api - listed tasks",
+          "  count: 1",
+          "  tasks:",
+          "    -",
+          "      title: ubuntu.iso",
+          "      status: downloading",
+          "      progress: 25%",
+          "      size: 250 B / 1000 B",
+          "      download speed: 10 B/s"
+        ].join("\n")
+      )
+    );
   });
 
   it("calculates progress from top-level size and string transfer fields", async () => {

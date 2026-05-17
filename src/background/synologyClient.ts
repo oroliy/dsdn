@@ -1,5 +1,6 @@
 import { AppError } from "./errors";
 import { debugLog } from "../shared/debug";
+import { summarizeTasksForDebug } from "../shared/taskDebug";
 import type { ApiError, DestinationOption, DownloadTask, DownloadTaskStatus, SessionState } from "../shared/types";
 
 const AUTH_PATH = "/webapi/auth.cgi";
@@ -53,7 +54,7 @@ export function createSynologyClient(baseUrl: string, fetcher: Fetcher = fetch) 
       });
       const data = await request<{ tasks?: RawTask[] }>(fetcher, url);
       const tasks = (data.tasks ?? []).map(normalizeTask);
-      debugLog("api", "listed tasks", { count: tasks.length });
+      debugLog("api", "listed tasks", summarizeTasksForDebug(tasks));
       return tasks;
     },
 
