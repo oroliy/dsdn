@@ -156,6 +156,50 @@ describe("TaskList", () => {
     expect(titles[1]).toContain("low");
   });
 
+  it("uses created date descending as the default sort", () => {
+    render(
+      <TaskList
+        loading={false}
+        error={null}
+        onRefresh={vi.fn()}
+        onAddClick={vi.fn()}
+        t={t}
+        tasks={[
+          {
+            id: "1",
+            title: "older",
+            status: "downloading",
+            progress: 10,
+            downloadedBytes: 1,
+            uploadedBytes: 0,
+            totalBytes: 10,
+            downloadSpeed: 1,
+            uploadSpeed: 0,
+            createdAt: 100
+          },
+          {
+            id: "2",
+            title: "newer",
+            status: "downloading",
+            progress: 20,
+            downloadedBytes: 2,
+            uploadedBytes: 0,
+            totalBytes: 10,
+            downloadSpeed: 1,
+            uploadSpeed: 0,
+            createdAt: 200
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByLabelText("Sort by")).toHaveValue("createdAt");
+    expect(screen.getByLabelText("Sort direction")).toHaveValue("desc");
+    const titles = screen.getAllByRole("article").map((item) => item.textContent);
+    expect(titles[0]).toContain("newer");
+    expect(titles[1]).toContain("older");
+  });
+
   it("sorts tasks by created and completed dates", () => {
     render(
       <TaskList

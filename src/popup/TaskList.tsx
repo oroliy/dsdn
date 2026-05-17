@@ -13,8 +13,8 @@ type TaskListProps = {
 };
 
 export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskClick, t }: TaskListProps) {
-  const [sortBy, setSortBy] = useState<SortBy>("title");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [sortBy, setSortBy] = useState<SortBy>("createdAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [filter, setFilter] = useState<TaskFilter>("all");
   const visibleTasks = useMemo(() => sortTasks(filterTasks(tasks, filter), sortBy, sortDirection), [tasks, filter, sortBy, sortDirection]);
 
