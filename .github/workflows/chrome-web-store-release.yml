@@ -5,6 +5,9 @@ on:
     tags:
       - "v*.*.*"
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: windows-latest
@@ -35,6 +38,30 @@ jobs:
 
       - name: Package extension
         run: npm run package
+
+      - name: Resolve package path
+        id: package
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem -Path release -Filter "synology-download-station-extension-*.zip" | Select-Object -First 1
+          if (-not $zip) {
+            throw "Release zip not found."
+          }
+          "zip_path=$($zip.FullName)" >> $env:GITHUB_OUTPUT
+          "zip_name=$($zip.Name)" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag "${{ steps.package.outputs.zip_path }}" --clobber
+          } else {
+            gh release create $tag "${{ steps.package.outputs.zip_path }}" --title $tag --notes "Chrome extension package for $tag."
+          }
 
       - name: Publish to Chrome Web Store
         run: npm run publish:cws

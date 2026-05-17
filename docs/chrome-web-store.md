@@ -89,7 +89,15 @@ git push
 git push origin v0.1.1
 ```
 
-The workflow will run tests, type check, build, package, upload the ZIP to Chrome Web Store API v2, and submit the item for review. Chrome review still applies; automation does not bypass review.
+The workflow will run tests, type check, build, package, publish a GitHub Release asset, upload the ZIP to Chrome Web Store API v2, and submit the item for review. Chrome review still applies; automation does not bypass review.
+
+The GitHub Release asset is the generated package:
+
+```text
+synology-download-station-extension-<version>.zip
+```
+
+If a release for the tag already exists, the workflow replaces that ZIP asset with the newly generated package.
 
 ### Local Dry Run
 
