@@ -26,6 +26,7 @@ export type DownloadTask = {
   destination?: string;
   uri?: string;
   createdAt?: number;
+  completedAt?: number;
   error?: string;
 };
 

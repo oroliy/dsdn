@@ -49,6 +49,8 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
             <option value="totalBytes">{t.size}</option>
             <option value="downloadSpeed">{t.downloadSpeed}</option>
             <option value="uploadSpeed">{t.uploadSpeed}</option>
+            <option value="createdAt">{t.created}</option>
+            <option value="completedAt">{t.completed}</option>
           </select>
         </label>
         <label>
@@ -108,7 +110,7 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
   );
 }
 
-type SortBy = "title" | "status" | "progress" | "totalBytes" | "downloadSpeed" | "uploadSpeed";
+type SortBy = "title" | "status" | "progress" | "totalBytes" | "downloadSpeed" | "uploadSpeed" | "createdAt" | "completedAt";
 type SortDirection = "asc" | "desc";
 type TaskFilter = "all" | "downloading" | "finished";
 
@@ -122,6 +124,9 @@ function sortTasks(tasks: DownloadTask[], sortBy: SortBy, direction: SortDirecti
   return [...tasks].sort((a, b) => {
     const left = a[sortBy];
     const right = b[sortBy];
+    if (left === undefined && right === undefined) return 0;
+    if (left === undefined) return 1;
+    if (right === undefined) return -1;
     if (typeof left === "string" && typeof right === "string") {
       return left.localeCompare(right) * multiplier;
     }

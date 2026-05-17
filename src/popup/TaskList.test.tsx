@@ -156,6 +156,71 @@ describe("TaskList", () => {
     expect(titles[1]).toContain("low");
   });
 
+  it("sorts tasks by created and completed dates", () => {
+    render(
+      <TaskList
+        loading={false}
+        error={null}
+        onRefresh={vi.fn()}
+        onAddClick={vi.fn()}
+        t={t}
+        tasks={[
+          {
+            id: "1",
+            title: "old done",
+            status: "finished",
+            progress: 100,
+            downloadedBytes: 10,
+            uploadedBytes: 0,
+            totalBytes: 10,
+            downloadSpeed: 0,
+            uploadSpeed: 0,
+            createdAt: 100,
+            completedAt: 200
+          },
+          {
+            id: "2",
+            title: "new done",
+            status: "finished",
+            progress: 100,
+            downloadedBytes: 10,
+            uploadedBytes: 0,
+            totalBytes: 10,
+            downloadSpeed: 0,
+            uploadSpeed: 0,
+            createdAt: 300,
+            completedAt: 400
+          },
+          {
+            id: "3",
+            title: "active",
+            status: "downloading",
+            progress: 50,
+            downloadedBytes: 5,
+            uploadedBytes: 0,
+            totalBytes: 10,
+            downloadSpeed: 1,
+            uploadSpeed: 0,
+            createdAt: 500
+          }
+        ]}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Sort by"), { target: { value: "createdAt" } });
+    fireEvent.change(screen.getByLabelText("Sort direction"), { target: { value: "desc" } });
+    let titles = screen.getAllByRole("article").map((item) => item.textContent);
+    expect(titles[0]).toContain("active");
+    expect(titles[1]).toContain("new done");
+    expect(titles[2]).toContain("old done");
+
+    fireEvent.change(screen.getByLabelText("Sort by"), { target: { value: "completedAt" } });
+    titles = screen.getAllByRole("article").map((item) => item.textContent);
+    expect(titles[0]).toContain("new done");
+    expect(titles[1]).toContain("old done");
+    expect(titles[2]).toContain("active");
+  });
+
   it("filters tasks by downloading and finished status", () => {
     render(
       <TaskList

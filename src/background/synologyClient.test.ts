@@ -25,7 +25,12 @@ describe("createSynologyClient", () => {
               size: "1000",
               status: "downloading",
               additional: {
-                detail: { destination: "Download", uri: "https://example.com/ubuntu.iso", create_time: "1700000000" },
+                detail: {
+                  destination: "Download",
+                  uri: "https://example.com/ubuntu.iso",
+                  create_time: "1700000000",
+                  completed_time: "1700003600"
+                },
                 transfer: { size_downloaded: 250, size_uploaded: 5, speed_download: 10, speed_upload: 2 }
               }
             }
@@ -50,7 +55,8 @@ describe("createSynologyClient", () => {
         uploadSpeed: 2,
         destination: "Download",
         uri: "https://example.com/ubuntu.iso",
-        createdAt: 1700000000
+        createdAt: 1700000000,
+        completedAt: 1700003600
       }
     ]);
     expect(log).toHaveBeenCalledWith(

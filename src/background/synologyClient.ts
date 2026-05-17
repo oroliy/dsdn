@@ -175,7 +175,13 @@ type RawTask = {
   status?: string;
   status_extra?: { error_detail?: string };
   additional?: {
-    detail?: { total_size?: number | string; destination?: string; uri?: string; create_time?: number | string };
+    detail?: {
+      total_size?: number | string;
+      destination?: string;
+      uri?: string;
+      create_time?: number | string;
+      completed_time?: number | string;
+    };
     transfer?: {
       size_downloaded?: number | string;
       size_uploaded?: number | string;
@@ -205,6 +211,7 @@ export function normalizeTask(raw: RawTask): DownloadTask {
     ...(raw.additional?.detail?.destination ? { destination: raw.additional.detail.destination } : {}),
     ...(raw.additional?.detail?.uri ? { uri: raw.additional.detail.uri } : {}),
     ...(raw.additional?.detail?.create_time ? { createdAt: toNumber(raw.additional.detail.create_time) } : {}),
+    ...(raw.additional?.detail?.completed_time ? { completedAt: toNumber(raw.additional.detail.completed_time) } : {}),
     ...(raw.status_extra?.error_detail ? { error: raw.status_extra.error_detail } : {})
   };
 }

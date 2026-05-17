@@ -175,6 +175,7 @@ function LanguageSelect({ locale, onLocaleChange, t }: { locale: Locale; onLocal
 
 function TaskDetail({ task, onBack, t }: { task: DownloadTask; onBack: () => void; t: Messages }) {
   const createdAt = task.createdAt ? new Date(task.createdAt * 1000).toLocaleString() : t.unknown;
+  const completedAt = task.completedAt ? new Date(task.completedAt * 1000).toLocaleString() : t.unknown;
 
   return (
     <section className="panel">
@@ -212,6 +213,10 @@ function TaskDetail({ task, onBack, t }: { task: DownloadTask; onBack: () => voi
         <div>
           <dt>{t.created}</dt>
           <dd>{createdAt}</dd>
+        </div>
+        <div>
+          <dt>{t.completed}</dt>
+          <dd>{completedAt}</dd>
         </div>
         <div>
           <dt>{t.progress}</dt>
