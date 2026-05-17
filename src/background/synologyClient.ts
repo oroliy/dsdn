@@ -6,6 +6,7 @@ import type { ApiError, DestinationOption, DownloadTask, DownloadTaskStatus, Ses
 const AUTH_PATH = "/webapi/auth.cgi";
 const INFO_PATH = "/webapi/DownloadStation/info.cgi";
 const TASK_PATH = "/webapi/DownloadStation/task.cgi";
+const FILE_STATION_SHARE_PATH = "/webapi/FileStation/file_share.cgi";
 
 type Fetcher = typeof fetch;
 type SynologyResponse<T> = { success: true; data?: T } | { success: false; error?: { code?: number | string } };
@@ -58,7 +59,7 @@ export function createSynologyClient(baseUrl: string, fetcher: Fetcher = fetch) 
       return tasks;
     },
 
-    async listDestinations(sid: string): Promise<DestinationOption[]> {
+    async listDestinations(sid: string, username?: string, password?: string): Promise<DestinationOption[]> {
       const url = endpoint(normalizedBaseUrl, INFO_PATH, {
         api: "SYNO.DownloadStation.Info",
         version: 1,
@@ -66,7 +67,11 @@ export function createSynologyClient(baseUrl: string, fetcher: Fetcher = fetch) 
         _sid: sid
       });
       const data = await request<DownloadStationConfig>(fetcher, url);
-      return normalizeDestinations(data);
+      const configured = normalizeDestinations(data);
+      const writableShares = username && password ? await listWritableShares(normalizedBaseUrl, username, password, fetcher) : [];
+      const destinations = mergeDestinations(configured, writableShares);
+      debugLog("api", "listed destinations", { count: destinations.length, destinations });
+      return destinations;
     },
 
     async createDownload(sid: string, uris: string[], destination?: string): Promise<{ created: number }> {
@@ -90,6 +95,62 @@ export function createSynologyClient(baseUrl: string, fetcher: Fetcher = fetch) 
       return { created: uris.length };
     }
   };
+}
+
+async function listWritableShares(baseUrl: string, username: string, password: string, fetcher: Fetcher): Promise<DestinationOption[]> {
+  let fileStationSid: string | null = null;
+  try {
+    const session = await loginToSession(baseUrl, "FileStation", username, password, fetcher);
+    fileStationSid = session.sid;
+    const url = endpoint(baseUrl, FILE_STATION_SHARE_PATH, {
+      api: "SYNO.FileStation.List",
+      version: 2,
+      method: "list_share",
+      onlywritable: "true",
+      _sid: fileStationSid
+    });
+    const data = await request<FileStationShareList>(fetcher, url);
+    return normalizeWritableShares(data);
+  } catch (error) {
+    debugLog("api", "directory listing unavailable", asDirectoryListError(error));
+    return [];
+  } finally {
+    if (fileStationSid) {
+      await logoutSession(baseUrl, "FileStation", fileStationSid, fetcher);
+    }
+  }
+}
+
+async function loginToSession(baseUrl: string, sessionName: string, username: string, password: string, fetcher: Fetcher): Promise<SessionState> {
+  const url = endpoint(baseUrl, AUTH_PATH, {
+    api: "SYNO.API.Auth",
+    version: 6,
+    method: "login",
+    account: username,
+    passwd: password,
+    session: sessionName,
+    format: "sid"
+  });
+  const data = await request<{ sid?: string }>(fetcher, url);
+  if (!data.sid) {
+    throw new AppError({ code: "missing_sid", message: `Synology ${sessionName} login did not return a session ID.`, retryable: false });
+  }
+  return { sid: data.sid, createdAt: Date.now() };
+}
+
+async function logoutSession(baseUrl: string, sessionName: string, sid: string, fetcher: Fetcher): Promise<void> {
+  const url = endpoint(baseUrl, AUTH_PATH, {
+    api: "SYNO.API.Auth",
+    version: 6,
+    method: "logout",
+    session: sessionName,
+    _sid: sid
+  });
+  try {
+    await request(fetcher, url);
+  } catch {
+    // Directory listing is optional; failed cleanup should not break task creation.
+  }
 }
 
 export function validateBaseUrl(value: string): string {
@@ -221,10 +282,46 @@ type DownloadStationConfig = {
   emule_default_destination?: string;
 };
 
+type FileStationShareList = {
+  shares?: Array<{
+    name?: string;
+    path?: string;
+    isdir?: boolean;
+  }>;
+};
+
 function normalizeDestinations(config: DownloadStationConfig): DestinationOption[] {
   return Array.from(new Set([config.default_destination, config.emule_default_destination].filter(Boolean)))
     .map((value) => String(value))
     .map((value) => ({ value, label: value }));
+}
+
+function normalizeWritableShares(data: FileStationShareList): DestinationOption[] {
+  return (data.shares ?? [])
+    .map((share) => normalizeSharePath(share.path ?? share.name))
+    .filter((value): value is string => Boolean(value))
+    .map((value) => ({ value, label: value }));
+}
+
+function normalizeSharePath(path: string | undefined): string | null {
+  const normalized = path?.trim().replace(/^\/+/, "");
+  return normalized || null;
+}
+
+function mergeDestinations(...groups: DestinationOption[][]): DestinationOption[] {
+  const seen = new Set<string>();
+  return groups.flat().filter((item) => {
+    if (seen.has(item.value)) return false;
+    seen.add(item.value);
+    return true;
+  });
+}
+
+function asDirectoryListError(error: unknown) {
+  if (error && typeof error === "object" && "apiError" in error) {
+    return (error as { apiError: ApiError }).apiError;
+  }
+  return { message: "Could not list writable DSM directories." };
 }
 
 function toNumber(value: number | string | undefined): number {

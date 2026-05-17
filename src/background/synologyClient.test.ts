@@ -108,22 +108,55 @@ describe("createSynologyClient", () => {
     ]);
   });
 
-  it("lists configured destination options", async () => {
-    const fetcher = vi.fn(async () =>
-      json({
-        success: true,
-        data: {
-          default_destination: "Download",
-          emule_default_destination: "emule"
-        }
-      })
-    );
+  it("lists configured and writable File Station destination options", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("method=getconfig")) {
+        return json({
+          success: true,
+          data: {
+            default_destination: "Download",
+            emule_default_destination: "emule"
+          }
+        });
+      }
+      if (url.includes("session=FileStation") && url.includes("method=login")) {
+        return json({ success: true, data: { sid: "FILE_SID" } });
+      }
+      if (url.includes("method=list_share")) {
+        return json({
+          success: true,
+          data: {
+            shares: [
+              { name: "Download", path: "/Download" },
+              { name: "Media", path: "/Media" }
+            ]
+          }
+        });
+      }
+      return json({ success: true });
+    });
     const client = createSynologyClient("https://nas.local:5001", fetcher);
 
-    await expect(client.listDestinations("SID123")).resolves.toEqual([
+    await expect(client.listDestinations("SID123", "user", "pass")).resolves.toEqual([
       { value: "Download", label: "Download" },
-      { value: "emule", label: "emule" }
+      { value: "emule", label: "emule" },
+      { value: "Media", label: "Media" }
     ]);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("api=SYNO.FileStation.List"), undefined);
+  });
+
+  it("falls back to configured destinations when File Station directory listing is unavailable", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("method=getconfig")) {
+        return json({ success: true, data: { default_destination: "Download" } });
+      }
+      return json({ success: false, error: { code: 107 } });
+    });
+    const client = createSynologyClient("https://nas.local:5001", fetcher);
+
+    await expect(client.listDestinations("SID123", "user", "pass")).resolves.toEqual([{ value: "Download", label: "Download" }]);
   });
 
   it("creates tasks with an urlencoded POST body", async () => {

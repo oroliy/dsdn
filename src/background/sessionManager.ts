@@ -38,23 +38,25 @@ export function createSessionManager(deps: {
   }
 
   async function listDestinations(): Promise<DestinationOption[]> {
-    return withSession((client, session) => client.listDestinations(session.sid));
+    return withSession((client, session, settings) => client.listDestinations(session.sid, settings.username, settings.password));
   }
 
-  async function withSession<T>(operation: (client: SynologyClient, session: SessionState) => Promise<T>): Promise<T> {
+  async function withSession<T>(
+    operation: (client: SynologyClient, session: SessionState, settings: { username: string; password: string }) => Promise<T>
+  ): Promise<T> {
     const settings = await requireSettings();
     const client = deps.clientFactory(settings.baseUrl);
     const session = (await deps.storage.getSession()) ?? (await login(settings, client));
 
     try {
-      return await operation(client, session);
+      return await operation(client, session, settings);
     } catch (error) {
       if (!isAuthError(error)) {
         throw new AppError(asApiError(error));
       }
       await deps.storage.clearSession();
       const nextSession = await login(settings, client);
-      return operation(client, nextSession);
+      return operation(client, nextSession, settings);
     }
   }
 

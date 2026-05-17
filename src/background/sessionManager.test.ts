@@ -59,7 +59,7 @@ describe("createSessionManager", () => {
 
     await session.listDestinations();
 
-    expect(client.listDestinations).toHaveBeenCalledWith("SID123");
+    expect(client.listDestinations).toHaveBeenCalledWith("SID123", "user", "pass");
   });
 });
 
