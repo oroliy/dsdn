@@ -404,7 +404,12 @@ function TaskDetail({
         </div>
         <div>
           <dt>{t.progress}</dt>
-          <dd>{task.progress}%</dd>
+          <dd className="detail-progress">
+            <span>{task.progress}%</span>
+            <div className="progress" aria-label={`${task.title} detail progress`}>
+              <span style={{ width: `${task.progress}%` }} />
+            </div>
+          </dd>
         </div>
         <div>
           <dt>{t.downloaded}</dt>
@@ -419,11 +424,6 @@ function TaskDetail({
           <dd>{formatBytes(task.totalBytes)}</dd>
         </div>
       </dl>
-      <div className="detail-progress">
-        <div className="progress" aria-label={`${task.title} detail progress`}>
-          <span style={{ width: `${task.progress}%` }} />
-        </div>
-      </div>
       {copied ? <p className="notice success">{t.copied}</p> : null}
       {task.error ? <p className="error">{task.error}</p> : null}
       {error ? <p className="error">{error}</p> : null}

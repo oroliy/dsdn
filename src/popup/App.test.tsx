@@ -122,7 +122,9 @@ describe("App", () => {
     expect(screen.getByText("Download")).toBeInTheDocument();
     expect(screen.getByText("https://example.com/ubuntu.iso")).toBeInTheDocument();
     expect(screen.getAllByText("2.0 KB").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("ubuntu.iso detail progress").querySelector("span")).toHaveStyle({ width: "100%" });
+    const progressRow = screen.getByText("Progress").closest("div");
+    expect(progressRow).not.toBeNull();
+    expect(progressRow?.querySelector('[aria-label="ubuntu.iso detail progress"] span')).toHaveStyle({ width: "100%" });
 
     await userEvent.click(screen.getByRole("button", { name: "Copy URI" }));
 

@@ -60,7 +60,7 @@ describe("link context menu", () => {
     expect(chromeApi.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);
   });
 
-  it("creates the add-to-download-station menu item for links", async () => {
+  it("creates the add-to-download-station menu item for supported content-script targets", async () => {
     const chromeApi = createFakeChrome();
 
     await createDownloadLinkContextMenu(chromeApi, fakeDeps("en"));
@@ -70,7 +70,7 @@ describe("link context menu", () => {
       {
         id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
         title: "Add to Download Station",
-        contexts: ["link"],
+        contexts: ["all"],
         documentUrlPatterns: ["http://*/*", "https://*/*"],
         visible: false
       },
@@ -133,6 +133,18 @@ describe("link context menu", () => {
     expect(chromeApi.action.setPopup).toHaveBeenNthCalledWith(2, { popup: "index.html" });
     expect(chromeApi.windows.create).not.toHaveBeenCalled();
     expect(chromeApi.tabs.create).not.toHaveBeenCalled();
+  });
+
+  it("opens the content-script reported link when Chrome does not provide linkUrl", async () => {
+    const chromeApi = createFakeChrome();
+    const linkUrl = "magnet:?xt=urn:btih:test";
+
+    await setDownloadLinkContextMenuVisibility(chromeApi, linkUrl);
+    await handleDownloadLinkContextMenuClick({ menuItemId: ADD_TO_DOWNLOAD_STATION_MENU_ID } as chrome.contextMenus.OnClickData, chromeApi);
+
+    const expectedPopup = `index.html?${new URLSearchParams({ view: "add", uri: linkUrl }).toString()}`;
+    expect(chromeApi.action.setPopup).toHaveBeenNthCalledWith(1, { popup: expectedPopup });
+    expect(chromeApi.action.openPopup).toHaveBeenCalledOnce();
   });
 
   it("falls back to a popup window when the action popup cannot be opened", async () => {

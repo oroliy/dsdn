@@ -16,6 +16,7 @@ type BrowserLinkContextMenuTargetRequest = {
 const POPUP_WIDTH = 420;
 const POPUP_HEIGHT = 720;
 const DEFAULT_POPUP_PATH = "index.html";
+let currentContextMenuHref: string | null = null;
 
 export function registerDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome, deps: LinkContextMenuDeps): void {
   chromeApi.runtime.onInstalled.addListener(() => {
@@ -27,7 +28,7 @@ export function registerDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome
   void createDownloadLinkContextMenu(chromeApi, deps);
   debugLog("browser downloader", "context menu handlers registered", {
     menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
-    contexts: ["link"]
+    contexts: ["all"]
   });
 }
 
@@ -41,7 +42,7 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
         {
           id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
           title,
-          contexts: ["link"],
+          contexts: ["all"],
           documentUrlPatterns: ["http://*/*", "https://*/*"],
           visible: false
         },
@@ -58,7 +59,7 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
           debugLog("browser downloader", "context menu ready", {
             menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
             title,
-            contexts: ["link"]
+            contexts: ["all"]
           });
           resolve();
         }
@@ -68,7 +69,8 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
 }
 
 export async function setDownloadLinkContextMenuVisibility(chromeApi: LinkContextMenuChrome, href: string | null): Promise<void> {
-  const visible = Boolean(href && isSupportedDownloadUri(href));
+  currentContextMenuHref = href && isSupportedDownloadUri(href) ? href.trim() : null;
+  const visible = Boolean(currentContextMenuHref);
   return new Promise((resolve) => {
     chromeApi.contextMenus.update(ADD_TO_DOWNLOAD_STATION_MENU_ID, { visible }, () => {
       const errorMessage = chromeApi.runtime.lastError?.message;
@@ -97,7 +99,8 @@ export async function handleDownloadLinkContextMenuClick(
 ): Promise<void> {
   if (info.menuItemId !== ADD_TO_DOWNLOAD_STATION_MENU_ID) return;
 
-  const linkUrl = typeof info.linkUrl === "string" ? info.linkUrl.trim() : "";
+  const linkUrlFromChrome = typeof info.linkUrl === "string" ? info.linkUrl.trim() : "";
+  const linkUrl = isSupportedDownloadUri(linkUrlFromChrome) ? linkUrlFromChrome : (currentContextMenuHref ?? "");
   debugLog("browser downloader", "link selected from context menu", { linkUrl });
 
   if (!isSupportedDownloadUri(linkUrl)) {
