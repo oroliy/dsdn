@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Messages } from "./i18n";
+import { isSupportedDownloadUri, parseDownloadUris } from "../shared/downloadUris";
 import type { DestinationOption } from "../shared/types";
 
 type AddDownloadProps = {
   loading: boolean;
   error: string | null;
+  initialUris?: string[];
   destinations?: DestinationOption[];
   onCancel: () => void;
   onCreate: (uris: string[], destination?: string) => Promise<void>;
@@ -13,14 +15,19 @@ type AddDownloadProps = {
   t: Messages;
 };
 
-export function AddDownload({ loading, error, destinations = [], onCancel, onCreate, languageControl, t }: AddDownloadProps) {
-  const [input, setInput] = useState("");
+export function AddDownload({ loading, error, initialUris = [], destinations = [], onCancel, onCreate, languageControl, t }: AddDownloadProps) {
+  const initialInput = initialUris.join("\n");
+  const [input, setInput] = useState(initialInput);
   const [destination, setDestination] = useState("");
   const [customDestination, setCustomDestination] = useState("");
   const uris = useMemo(() => parseDownloadUris(input), [input]);
   const invalidUris = uris.filter((uri) => !isSupportedDownloadUri(uri));
   const canSubmit = uris.length > 0 && invalidUris.length === 0 && !loading;
   const selectedDestination = destination === "__custom" ? customDestination.trim() : destination;
+
+  useEffect(() => {
+    setInput(initialInput);
+  }, [initialInput]);
 
   return (
     <form
@@ -81,21 +88,4 @@ export function AddDownload({ loading, error, destinations = [], onCancel, onCre
       </button>
     </form>
   );
-}
-
-export function parseDownloadUris(input: string): string[] {
-  return input
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-export function isSupportedDownloadUri(value: string): boolean {
-  if (value.startsWith("magnet:?")) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" || url.protocol === "ftp:";
-  } catch {
-    return false;
-  }
 }

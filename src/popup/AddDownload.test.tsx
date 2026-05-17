@@ -1,25 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { AddDownload, isSupportedDownloadUri, parseDownloadUris } from "./AddDownload";
+import { AddDownload } from "./AddDownload";
 import { getMessages } from "./i18n";
 
 const t = getMessages("en");
 
 describe("AddDownload", () => {
-  it("parses newline separated urls", () => {
-    expect(parseDownloadUris("https://a.test/file.iso\n\n magnet:?xt=urn:btih:test ")).toEqual([
-      "https://a.test/file.iso",
-      "magnet:?xt=urn:btih:test"
-    ]);
-  });
-
-  it("validates supported uri schemes", () => {
-    expect(isSupportedDownloadUri("https://example.com/file.iso")).toBe(true);
-    expect(isSupportedDownloadUri("magnet:?xt=urn:btih:test")).toBe(true);
-    expect(isSupportedDownloadUri("javascript:alert(1)")).toBe(false);
-  });
-
   it("disables submit for empty input and submits valid urls", async () => {
     const onCreate = vi.fn(async () => undefined);
     render(<AddDownload loading={false} error={null} onCancel={vi.fn()} onCreate={onCreate} t={t} />);
@@ -52,5 +39,20 @@ describe("AddDownload", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add download" }));
 
     expect(onCreate).toHaveBeenCalledWith(["https://example.com/file.iso"], "Download");
+  });
+
+  it("prefills initial URIs from a browser link action", () => {
+    render(
+      <AddDownload
+        loading={false}
+        error={null}
+        initialUris={["magnet:?xt=urn:btih:test"]}
+        onCancel={vi.fn()}
+        onCreate={vi.fn()}
+        t={t}
+      />
+    );
+
+    expect(screen.getByLabelText("URLs or magnet links")).toHaveValue("magnet:?xt=urn:btih:test");
   });
 });

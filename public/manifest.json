@@ -12,6 +12,7 @@
     "type": "module"
   },
   "permissions": [
+    "contextMenus",
     "storage"
   ],
   "host_permissions": [

@@ -4,6 +4,7 @@ import { AddDownload } from "./AddDownload";
 import { sendMessage } from "./api";
 import { formatBytes, TaskList, translateStatus } from "./TaskList";
 import { getMessages, type Locale, type Messages } from "./i18n";
+import { isSupportedDownloadUri } from "../shared/downloadUris";
 import type { ConnectionSettings, DestinationOption, DownloadTask } from "../shared/types";
 
 type View = "loading" | "setup" | "tasks" | "add";
@@ -21,6 +22,7 @@ export function App() {
   const [settings, setSettings] = useState<ConnectionSettings>(emptySettings);
   const [tasks, setTasks] = useState<DownloadTask[]>([]);
   const [selectedTask, setSelectedTask] = useState<DownloadTask | null>(null);
+  const [addInitialUris, setAddInitialUris] = useState<string[]>(() => getInitialAddDownloadUris());
   const [destinations, setDestinations] = useState<DestinationOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,10 @@ export function App() {
         return;
       }
       setSettings(response.data);
+      if (addInitialUris.length > 0) {
+        void openAddView(addInitialUris);
+        return;
+      }
       setView("tasks");
       void loadTasks();
     });
@@ -66,7 +72,8 @@ export function App() {
     setTasks(response.data);
   }
 
-  async function openAddView() {
+  async function openAddView(initialUris: string[] = []) {
+    setAddInitialUris(initialUris);
     setView("add");
     setError(null);
     const response = await sendMessage({ type: "destinations.list" });
@@ -76,6 +83,12 @@ export function App() {
       return;
     }
     setDestinations(response.data);
+  }
+
+  function closeAddView() {
+    setAddInitialUris([]);
+    setView("tasks");
+    void loadTasks();
   }
 
   async function saveAndConnect(nextSettings: ConnectionSettings) {
@@ -100,6 +113,10 @@ export function App() {
       return;
     }
     setSettings(nextSettings);
+    if (addInitialUris.length > 0) {
+      await openAddView(addInitialUris);
+      return;
+    }
     setView("tasks");
     await loadTasks();
   }
@@ -113,6 +130,7 @@ export function App() {
       setError(response.error.message);
       return;
     }
+    setAddInitialUris([]);
     setView("tasks");
     await loadTasks();
   }
@@ -150,8 +168,9 @@ export function App() {
         <AddDownload
           loading={loading}
           error={error}
+          initialUris={addInitialUris}
           destinations={destinations}
-          onCancel={() => setView("tasks")}
+          onCancel={closeAddView}
           onCreate={createDownload}
           languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
           t={t}
@@ -180,13 +199,23 @@ export function App() {
         loading={loading}
         error={error}
         onRefresh={loadTasks}
-        onAddClick={openAddView}
+        onAddClick={() => void openAddView()}
         onTaskClick={setSelectedTask}
         languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
         t={t}
       />
     </main>
   );
+}
+
+function getInitialAddDownloadUris(): string[] {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("view") !== "add") return [];
+
+  const uri = params.get("uri")?.trim();
+  if (!uri || !isSupportedDownloadUri(uri)) return [];
+
+  return [uri];
 }
 
 function LanguageSelect({ locale, onLocaleChange, t }: { locale: Locale; onLocaleChange: (locale: Locale) => void; t: Messages }) {

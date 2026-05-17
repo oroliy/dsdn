@@ -1,4 +1,5 @@
 import { createMessageHandler } from "./messageHandler";
+import { registerDownloadLinkContextMenu } from "./linkContextMenu";
 import { createSessionManager } from "./sessionManager";
 import { createStorageAdapter } from "./storage";
 import { createSynologyClient } from "./synologyClient";
@@ -14,3 +15,5 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   handleMessage(request).then(sendResponse);
   return true;
 });
+
+registerDownloadLinkContextMenu(chrome);

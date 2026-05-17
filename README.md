@@ -9,6 +9,7 @@ Chrome Manifest V3 extension for managing a Synology Download Station session.
 - View current download tasks with sorting and status filtering.
 - Open task details from the task list.
 - Add HTTP, HTTPS, FTP, and magnet downloads.
+- Right-click supported links in Chrome and open the add-download page with the link prefilled.
 - Choose configured Download Station destination folders when available.
 - Switch Popup text between English and Chinese.
 - Generate a Chrome Web Store upload zip.
@@ -61,6 +62,8 @@ After installation, open the extension popup and enter:
 - DSM password
 
 For best results, use HTTPS and a DSM account with only the permissions needed for Download Station.
+
+To add a link from a web page, right-click an HTTP, HTTPS, FTP, or magnet link and choose `Add to Download Station / 添加到 Download Station`. The extension opens a compact add-download window with the link already filled in.
 
 ## Security Notes
 

@@ -12,6 +12,7 @@ vi.mock("./api", () => ({
 describe("App", () => {
   beforeEach(() => {
     sendMessage.mockReset();
+    window.history.pushState({}, "", "/");
   });
 
   it("renders setup form when settings are missing", async () => {
@@ -138,5 +139,44 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue("zh"));
+  });
+
+  it("opens the add download page with a prefilled URI from the URL query", async () => {
+    window.history.pushState({}, "", "/?view=add&uri=https%3A%2F%2Fexample.com%2Ffile.iso");
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({ ok: true, data: [{ value: "Download", label: "Download" }] });
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Add download" })).toBeInTheDocument();
+    expect(screen.getByLabelText("URLs or magnet links")).toHaveValue("https://example.com/file.iso");
+    expect(await screen.findByRole("option", { name: "Download" })).toBeInTheDocument();
+    expect(sendMessage).not.toHaveBeenCalledWith({ type: "tasks.list" });
+  });
+
+  it("keeps a browser link URI pending until setup connects", async () => {
+    window.history.pushState({}, "", "/?view=add&uri=magnet%3A%3Fxt%3Durn%3Abtih%3Atest");
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: [] });
+
+    render(<App />);
+
+    await userEvent.type(await screen.findByLabelText("DSM URL"), "https://nas.local:5001");
+    await userEvent.type(screen.getByLabelText("Username"), "user");
+    await userEvent.type(screen.getByLabelText("Password"), "pass");
+    await userEvent.click(screen.getByRole("button", { name: "Save and connect" }));
+
+    expect(await screen.findByRole("heading", { name: "Add download" })).toBeInTheDocument();
+    expect(screen.getByLabelText("URLs or magnet links")).toHaveValue("magnet:?xt=urn:btih:test");
+    expect(sendMessage).toHaveBeenCalledWith({ type: "destinations.list" });
   });
 });
