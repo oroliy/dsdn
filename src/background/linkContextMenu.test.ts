@@ -118,6 +118,15 @@ describe("link context menu", () => {
     );
   });
 
+  it("logs context target visibility updates", async () => {
+    const chromeApi = createFakeChrome();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await setDownloadLinkContextMenuVisibility(chromeApi, "magnet:?xt=urn:btih:test");
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Browser Downloader - context target updated"));
+  });
+
   it("opens the add download page through the extension action popup for supported links", async () => {
     const chromeApi = createFakeChrome();
     const linkUrl = "https://example.com/file.iso";

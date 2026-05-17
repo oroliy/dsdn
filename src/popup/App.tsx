@@ -404,12 +404,7 @@ function TaskDetail({
         </div>
         <div>
           <dt>{t.progress}</dt>
-          <dd className="detail-progress">
-            <span>{task.progress}%</span>
-            <div className="progress" aria-label={`${task.title} detail progress`}>
-              <span style={{ width: `${task.progress}%` }} />
-            </div>
-          </dd>
+          <dd>{task.progress}%</dd>
         </div>
         <div>
           <dt>{t.downloaded}</dt>

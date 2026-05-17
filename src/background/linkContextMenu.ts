@@ -71,11 +71,21 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
 export async function setDownloadLinkContextMenuVisibility(chromeApi: LinkContextMenuChrome, href: string | null): Promise<void> {
   currentContextMenuHref = href && isSupportedDownloadUri(href) ? href.trim() : null;
   const visible = Boolean(currentContextMenuHref);
+  debugLog("browser downloader", "context target updated", {
+    href: currentContextMenuHref ?? "(none)",
+    visible
+  });
   return new Promise((resolve) => {
     chromeApi.contextMenus.update(ADD_TO_DOWNLOAD_STATION_MENU_ID, { visible }, () => {
       const errorMessage = chromeApi.runtime.lastError?.message;
       if (errorMessage) {
         debugLog("browser downloader", "context menu visibility update failed", { message: errorMessage, visible });
+      } else {
+        debugLog("browser downloader", "context menu visibility updated", {
+          menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
+          href: currentContextMenuHref ?? "(none)",
+          visible
+        });
       }
       resolve();
     });
