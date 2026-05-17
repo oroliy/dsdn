@@ -37,3 +37,66 @@ The extension does not collect, sell, transfer, or share user data. DSM credenti
 6. Attach at least one popup screenshot.
 7. Use the privacy disclosure above in the Chrome Web Store developer dashboard.
 8. Choose unlisted visibility.
+
+## First-Time Store Setup
+
+The first release must be created in the Chrome Web Store Developer Dashboard before GitHub can automate updates.
+
+1. Build the package locally:
+
+```powershell
+npm test
+npm run lint
+npm run build
+npm run package
+```
+
+2. Upload `release/synology-download-station-extension-0.1.0.zip`.
+3. Fill in the store listing using the descriptions above.
+4. Set visibility to `Unlisted`.
+5. Complete the privacy disclosure:
+   - The extension does not collect or sell user data.
+   - DSM credentials are stored only in Chrome extension local storage.
+   - Network requests go only to the DSM URL configured by the user.
+6. Publish once manually.
+7. Record the Chrome Web Store extension ID and publisher ID.
+
+## GitHub Automated Updates
+
+After the first manual publish, version updates can be automated by `.github/workflows/chrome-web-store-release.yml`.
+
+### Required GitHub Secrets
+
+Add these repository secrets:
+
+- `CWS_CLIENT_ID`
+- `CWS_CLIENT_SECRET`
+- `CWS_REFRESH_TOKEN`
+- `CWS_PUBLISHER_ID`
+- `CWS_EXTENSION_ID`
+
+The OAuth refresh token must be created for the `https://www.googleapis.com/auth/chromewebstore` scope.
+
+### Release Command
+
+Use tag-based releases so each Chrome Web Store upload has an explicit version bump:
+
+```powershell
+npm version patch
+npm run version:sync
+npm run version:check
+git push
+git push origin v0.1.1
+```
+
+The workflow will run tests, type check, build, package, upload the ZIP to Chrome Web Store API v2, and submit the item for review. Chrome review still applies; automation does not bypass review.
+
+### Local Dry Run
+
+Before configuring secrets, verify the publish script shape:
+
+```powershell
+npm run publish:cws -- --dry-run
+```
+
+The dry run prints the package path and API endpoints without requiring or printing secrets.

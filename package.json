@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1"
+    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1",
+    "version:sync": "node scripts/sync-manifest-version.mjs",
+    "version:check": "node scripts/sync-manifest-version.mjs --check",
+    "publish:cws": "node scripts/publish-chrome-web-store.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",
