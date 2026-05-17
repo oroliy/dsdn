@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import type { Messages } from "./i18n";
 import type { DestinationOption } from "../shared/types";
@@ -8,10 +9,11 @@ type AddDownloadProps = {
   destinations?: DestinationOption[];
   onCancel: () => void;
   onCreate: (uris: string[], destination?: string) => Promise<void>;
+  languageControl?: ReactNode;
   t: Messages;
 };
 
-export function AddDownload({ loading, error, destinations = [], onCancel, onCreate, t }: AddDownloadProps) {
+export function AddDownload({ loading, error, destinations = [], onCancel, onCreate, languageControl, t }: AddDownloadProps) {
   const [input, setInput] = useState("");
   const [destination, setDestination] = useState("");
   const [customDestination, setCustomDestination] = useState("");
@@ -32,9 +34,12 @@ export function AddDownload({ loading, error, destinations = [], onCancel, onCre
     >
       <div className="toolbar">
         <h1>{t.addDownload}</h1>
-        <button type="button" className="secondary" onClick={onCancel}>
-          {t.cancel}
-        </button>
+        <div className="toolbar-right">
+          {languageControl}
+          <button type="button" className="secondary" onClick={onCancel}>
+            {t.cancel}
+          </button>
+        </div>
       </div>
       <label>
         {t.urlsOrMagnets}

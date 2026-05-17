@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import type { Messages } from "./i18n";
 import type { DownloadTask } from "../shared/types";
@@ -9,10 +10,11 @@ type TaskListProps = {
   onRefresh: () => void;
   onAddClick: () => void;
   onTaskClick?: (task: DownloadTask) => void;
+  languageControl?: ReactNode;
   t: Messages;
 };
 
-export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskClick, t }: TaskListProps) {
+export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskClick, languageControl, t }: TaskListProps) {
   const [sortBy, setSortBy] = useState<SortBy>("createdAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [filter, setFilter] = useState<TaskFilter>("all");
@@ -22,26 +24,29 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
     <section className="panel">
       <div className="toolbar">
         <h1>Download Station</h1>
-        <div className="actions">
-          <button type="button" className="secondary" onClick={onRefresh} disabled={loading}>
-            {t.refresh}
-          </button>
-          <button type="button" onClick={onAddClick}>
-            {t.add}
-          </button>
+        <div className="toolbar-right">
+          {languageControl}
+          <div className="actions">
+            <button type="button" className="secondary" onClick={onRefresh} disabled={loading}>
+              {t.refresh}
+            </button>
+            <button type="button" onClick={onAddClick}>
+              {t.add}
+            </button>
+          </div>
         </div>
       </div>
-      <div className="sort-row">
-        <label>
-          {t.filter}
+      <div className="compact-controls">
+        <label className="compact-field">
+          <span>{t.filter}</span>
           <select aria-label={t.filter} value={filter} onChange={(event) => setFilter(event.target.value as TaskFilter)}>
             <option value="all">{t.all}</option>
             <option value="downloading">{t.downloading}</option>
             <option value="finished">{t.finished}</option>
           </select>
         </label>
-        <label>
-          {t.sortBy}
+        <label className="compact-field">
+          <span>{t.sortBy}</span>
           <select aria-label={t.sortBy} value={sortBy} onChange={(event) => setSortBy(event.target.value as SortBy)}>
             <option value="title">{t.title}</option>
             <option value="status">{t.status}</option>
@@ -53,8 +58,8 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
             <option value="completedAt">{t.completed}</option>
           </select>
         </label>
-        <label>
-          {t.sortDirection}
+        <label className="compact-field compact-field-direction">
+          <span>{t.sortDirection}</span>
           <select
             aria-label={t.sortDirection}
             value={sortDirection}

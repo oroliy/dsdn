@@ -118,6 +118,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByRole("button", { name: "Save and connect" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Language").closest(".language-icon-select")).not.toBeNull();
     await userEvent.selectOptions(screen.getByLabelText("Language"), "zh");
 
     expect(screen.getByRole("button", { name: "保存并连接" })).toBeInTheDocument();

@@ -113,6 +113,14 @@ describe("TaskList", () => {
     expect(onAddClick).toHaveBeenCalledOnce();
   });
 
+  it("renders filter and sorting controls in a compact toolbar", () => {
+    render(<TaskList loading={false} error={null} tasks={[]} onRefresh={vi.fn()} onAddClick={vi.fn()} t={t} />);
+
+    expect(screen.getByLabelText("Filter").closest(".compact-field")).not.toBeNull();
+    expect(screen.getByLabelText("Sort by").closest(".compact-field")).not.toBeNull();
+    expect(screen.getByLabelText("Sort direction").closest(".compact-field")).not.toBeNull();
+  });
+
   it("sorts tasks by progress descending", () => {
     render(
       <TaskList

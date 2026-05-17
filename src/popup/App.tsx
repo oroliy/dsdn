@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { AddDownload } from "./AddDownload";
 import { sendMessage } from "./api";
 import { formatBytes, TaskList, translateStatus } from "./TaskList";
@@ -108,14 +109,28 @@ export function App() {
   }
 
   if (view === "loading") {
-    return <main className="popup-shell"><LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} /><p className="muted">{t.loading}</p></main>;
+    return (
+      <main className="popup-shell">
+        <div className="toolbar">
+          <h1>Download Station</h1>
+          <LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />
+        </div>
+        <p className="muted">{t.loading}</p>
+      </main>
+    );
   }
 
   if (view === "setup") {
     return (
       <main className="popup-shell">
-        <LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />
-        <SetupForm settings={settings} loading={loading} error={error} onSubmit={saveAndConnect} t={t} />
+        <SetupForm
+          settings={settings}
+          loading={loading}
+          error={error}
+          onSubmit={saveAndConnect}
+          languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
+          t={t}
+        />
       </main>
     );
   }
@@ -123,13 +138,13 @@ export function App() {
   if (view === "add") {
     return (
       <main className="popup-shell">
-        <LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />
         <AddDownload
           loading={loading}
           error={error}
           destinations={destinations}
           onCancel={() => setView("tasks")}
           onCreate={createDownload}
+          languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
           t={t}
         />
       </main>
@@ -139,15 +154,18 @@ export function App() {
   if (selectedTask) {
     return (
       <main className="popup-shell">
-        <LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />
-        <TaskDetail task={selectedTask} onBack={() => setSelectedTask(null)} t={t} />
+        <TaskDetail
+          task={selectedTask}
+          onBack={() => setSelectedTask(null)}
+          languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
+          t={t}
+        />
       </main>
     );
   }
 
   return (
     <main className="popup-shell">
-      <LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />
       <TaskList
         tasks={tasks}
         loading={loading}
@@ -155,6 +173,7 @@ export function App() {
         onRefresh={loadTasks}
         onAddClick={openAddView}
         onTaskClick={setSelectedTask}
+        languageControl={<LanguageSelect locale={locale} onLocaleChange={setLocale} t={t} />}
         t={t}
       />
     </main>
@@ -163,8 +182,8 @@ export function App() {
 
 function LanguageSelect({ locale, onLocaleChange, t }: { locale: Locale; onLocaleChange: (locale: Locale) => void; t: Messages }) {
   return (
-    <label className="language-select">
-      {t.language}
+    <label className="language-icon-select" title={t.language}>
+      <span aria-hidden="true">🌐</span>
       <select aria-label={t.language} value={locale} onChange={(event) => onLocaleChange(event.target.value as Locale)}>
         <option value="en">English</option>
         <option value="zh">中文</option>
@@ -173,7 +192,17 @@ function LanguageSelect({ locale, onLocaleChange, t }: { locale: Locale; onLocal
   );
 }
 
-function TaskDetail({ task, onBack, t }: { task: DownloadTask; onBack: () => void; t: Messages }) {
+function TaskDetail({
+  task,
+  onBack,
+  languageControl,
+  t
+}: {
+  task: DownloadTask;
+  onBack: () => void;
+  languageControl?: ReactNode;
+  t: Messages;
+}) {
   const createdAt = task.createdAt ? new Date(task.createdAt * 1000).toLocaleString() : t.unknown;
   const completedAt = task.completedAt ? new Date(task.completedAt * 1000).toLocaleString() : t.unknown;
 
@@ -181,9 +210,12 @@ function TaskDetail({ task, onBack, t }: { task: DownloadTask; onBack: () => voi
     <section className="panel">
       <div className="toolbar">
         <h1>{t.detailTitle}</h1>
-        <button type="button" className="secondary" onClick={onBack}>
-          {t.back}
-        </button>
+        <div className="toolbar-right">
+          {languageControl}
+          <button type="button" className="secondary" onClick={onBack}>
+            {t.back}
+          </button>
+        </div>
       </div>
       <div className="detail-title">
         <strong>{task.title}</strong>
@@ -245,12 +277,14 @@ function SetupForm({
   loading,
   error,
   onSubmit,
+  languageControl,
   t
 }: {
   settings: ConnectionSettings;
   loading: boolean;
   error: string | null;
   onSubmit: (settings: ConnectionSettings) => Promise<void>;
+  languageControl?: ReactNode;
   t: Messages;
 }) {
   const [draft, setDraft] = useState(settings);
@@ -264,7 +298,10 @@ function SetupForm({
         void onSubmit(draft);
       }}
     >
-      <h1>Download Station</h1>
+      <div className="toolbar">
+        <h1>Download Station</h1>
+        {languageControl}
+      </div>
       <label>
         {t.dsmUrl}
         <input
