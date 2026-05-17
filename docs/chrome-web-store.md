@@ -99,6 +99,8 @@ synology-download-station-extension-<version>.zip
 
 If a release for the tag already exists, the workflow replaces that ZIP asset with the newly generated package.
 
+Chrome Web Store publishing runs only when all `CWS_*` repository secrets are configured. If any of those secrets are missing, the workflow still creates the GitHub Release and clearly logs that Chrome Web Store publishing was skipped.
+
 ### Local Dry Run
 
 Before configuring secrets, verify the publish script shape:

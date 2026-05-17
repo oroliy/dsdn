@@ -64,7 +64,20 @@ jobs:
           }
 
       - name: Publish to Chrome Web Store
+        if: ${{ env.CWS_CLIENT_ID != '' && env.CWS_CLIENT_SECRET != '' && env.CWS_REFRESH_TOKEN != '' && env.CWS_PUBLISHER_ID != '' && env.CWS_EXTENSION_ID != '' }}
         run: npm run publish:cws
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+
+      - name: Skip Chrome Web Store publish
+        if: ${{ env.CWS_CLIENT_ID == '' || env.CWS_CLIENT_SECRET == '' || env.CWS_REFRESH_TOKEN == '' || env.CWS_PUBLISHER_ID == '' || env.CWS_EXTENSION_ID == '' }}
+        run: |
+          echo "Chrome Web Store publish skipped because one or more CWS_* repository secrets are missing."
+          echo "Configure CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN, CWS_PUBLISHER_ID, and CWS_EXTENSION_ID to enable store publishing."
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
