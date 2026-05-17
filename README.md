@@ -31,6 +31,37 @@ npm run package
 
 Load `dist` as an unpacked extension from `chrome://extensions`.
 
+## Manual Installation
+
+### Install from GitHub Release
+
+1. Open the latest release:
+   <https://github.com/oroliy/dsdn/releases/latest>
+2. Download `synology-download-station-extension-<version>.zip` from the release assets.
+3. Extract the zip to a local folder. Chrome cannot load the zip directly as an unpacked extension.
+4. Open Chrome and go to `chrome://extensions`.
+5. Enable `Developer mode`.
+6. Click `Load unpacked`.
+7. Select the folder created by extracting the zip.
+8. Pin `Synology Download Station` from the Chrome extensions menu if desired.
+
+### Install from Source
+
+```powershell
+npm install
+npm run build
+```
+
+Then open `chrome://extensions`, enable `Developer mode`, click `Load unpacked`, and select the `dist` folder.
+
+After installation, open the extension popup and enter:
+
+- DSM URL, for example `https://nas.local:5001`
+- DSM username
+- DSM password
+
+For best results, use HTTPS and a DSM account with only the permissions needed for Download Station.
+
 ## Security Notes
 
 The extension stores the DSM username and password in `chrome.storage.local`.
