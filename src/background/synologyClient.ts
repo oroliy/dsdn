@@ -93,8 +93,32 @@ export function createSynologyClient(baseUrl: string, fetcher: Fetcher = fetch) 
       });
       debugLog("api", "created downloads", { count: uris.length, hasDestination: Boolean(destination?.trim()) });
       return { created: uris.length };
+    },
+
+    async pauseTask(sid: string, id: string): Promise<void> {
+      await controlTask(normalizedBaseUrl, fetcher, sid, "pause", id);
+    },
+
+    async resumeTask(sid: string, id: string): Promise<void> {
+      await controlTask(normalizedBaseUrl, fetcher, sid, "resume", id);
+    },
+
+    async deleteTask(sid: string, id: string): Promise<void> {
+      await controlTask(normalizedBaseUrl, fetcher, sid, "delete", id);
     }
   };
+}
+
+async function controlTask(baseUrl: string, fetcher: Fetcher, sid: string, method: "pause" | "resume" | "delete", id: string): Promise<void> {
+  const url = endpoint(baseUrl, TASK_PATH, {
+    api: "SYNO.DownloadStation.Task",
+    version: 3,
+    method,
+    id,
+    _sid: sid
+  });
+  await request(fetcher, url);
+  debugLog("api", "controlled task", { method, id });
 }
 
 async function listWritableShares(baseUrl: string, username: string, password: string, fetcher: Fetcher): Promise<DestinationOption[]> {

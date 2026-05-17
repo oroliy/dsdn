@@ -91,6 +91,11 @@ button.secondary {
   background: #e6eaf0;
 }
 
+button.danger {
+  color: #fff;
+  background: #dc2626;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -309,6 +314,15 @@ button.secondary {
   color: #172033;
   font-size: 12px;
   font-weight: 650;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.detail-actions button {
+  flex: 1 1 0;
 }
 
 .break-word {

@@ -197,6 +197,20 @@ describe("createSynologyClient", () => {
     );
   });
 
+  it("controls tasks with Download Station task methods", async () => {
+    const fetcher = vi.fn(async () => json({ success: true }));
+    const client = createSynologyClient("https://nas.local:5001", fetcher);
+
+    await client.pauseTask("SID123", "dbid_1");
+    await client.resumeTask("SID123", "dbid_1");
+    await client.deleteTask("SID123", "dbid_1");
+
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("method=pause"), undefined);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("method=resume"), undefined);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("method=delete"), undefined);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("id=dbid_1"), undefined);
+  });
+
   it("rejects non-http base urls", () => {
     expect(() => validateBaseUrl("file:///tmp/dsm")).toThrow(AppError);
   });

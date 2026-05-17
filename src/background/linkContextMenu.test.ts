@@ -6,7 +6,7 @@ import {
   registerDownloadLinkContextMenu
 } from "./linkContextMenu";
 
-type FakeChrome = Pick<typeof chrome, "contextMenus" | "runtime" | "tabs" | "windows">;
+type FakeChrome = Pick<typeof chrome, "action" | "contextMenus" | "runtime" | "tabs" | "windows">;
 
 function createFakeChrome(): FakeChrome {
   const fakeRuntime = {
@@ -17,6 +17,10 @@ function createFakeChrome(): FakeChrome {
   } as unknown as typeof chrome.runtime;
 
   return {
+    action: {
+      openPopup: vi.fn(async () => undefined),
+      setPopup: vi.fn(async () => undefined)
+    } as unknown as typeof chrome.action,
     contextMenus: {
       create: vi.fn((_properties, callback?: () => void) => callback?.()),
       removeAll: vi.fn((callback?: () => void) => callback?.()),
@@ -31,6 +35,12 @@ function createFakeChrome(): FakeChrome {
     windows: {
       create: vi.fn((_properties, callback?: () => void) => callback?.())
     } as unknown as typeof chrome.windows
+  } as FakeChrome;
+}
+
+function fakeDeps(locale: "en" | "zh" | null = "en") {
+  return {
+    getLocale: vi.fn(async () => locale)
   };
 }
 
@@ -42,31 +52,64 @@ describe("link context menu", () => {
   it("registers a link-only context menu on install and click handler immediately", () => {
     const chromeApi = createFakeChrome();
 
-    registerDownloadLinkContextMenu(chromeApi);
+    registerDownloadLinkContextMenu(chromeApi, fakeDeps());
 
     expect(chromeApi.runtime.onInstalled.addListener).toHaveBeenCalledTimes(1);
     expect(chromeApi.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);
   });
 
-  it("creates the add-to-download-station menu item for links", () => {
+  it("creates the add-to-download-station menu item for links", async () => {
     const chromeApi = createFakeChrome();
 
-    createDownloadLinkContextMenu(chromeApi);
+    await createDownloadLinkContextMenu(chromeApi, fakeDeps("en"));
 
     expect(chromeApi.contextMenus.removeAll).toHaveBeenCalledTimes(1);
     expect(chromeApi.contextMenus.create).toHaveBeenCalledWith(
       {
         id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
-        title: "Add to Download Station / 添加到 Download Station",
+        title: "Add to Download Station",
         contexts: ["link"]
       },
       expect.any(Function)
     );
   });
 
-  it("opens the add download page in a popup window for supported links", async () => {
+  it("uses the configured locale for the menu title", async () => {
+    const chromeApi = createFakeChrome();
+
+    await createDownloadLinkContextMenu(chromeApi, fakeDeps("zh"));
+
+    expect(chromeApi.contextMenus.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "添加到 Download Station"
+      }),
+      expect.any(Function)
+    );
+  });
+
+  it("opens the add download page through the extension action popup for supported links", async () => {
     const chromeApi = createFakeChrome();
     const linkUrl = "https://example.com/file.iso";
+
+    await handleDownloadLinkContextMenuClick(
+      { menuItemId: ADD_TO_DOWNLOAD_STATION_MENU_ID, linkUrl } as chrome.contextMenus.OnClickData,
+      chromeApi
+    );
+
+    const expectedPopup = `index.html?${new URLSearchParams({ view: "add", uri: linkUrl }).toString()}`;
+    expect(chromeApi.action.setPopup).toHaveBeenNthCalledWith(1, { popup: expectedPopup });
+    expect(chromeApi.action.openPopup).toHaveBeenCalledOnce();
+    expect(chromeApi.action.setPopup).toHaveBeenNthCalledWith(2, { popup: "index.html" });
+    expect(chromeApi.windows.create).not.toHaveBeenCalled();
+    expect(chromeApi.tabs.create).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a popup window when the action popup cannot be opened", async () => {
+    const chromeApi = createFakeChrome();
+    const linkUrl = "magnet:?xt=urn:btih:test";
+    chromeApi.action.openPopup = vi.fn(async () => {
+      throw new Error("Popup blocked");
+    }) as unknown as typeof chrome.action.openPopup;
 
     await handleDownloadLinkContextMenuClick(
       { menuItemId: ADD_TO_DOWNLOAD_STATION_MENU_ID, linkUrl } as chrome.contextMenus.OnClickData,
@@ -84,25 +127,6 @@ describe("link context menu", () => {
       },
       expect.any(Function)
     );
-    expect(chromeApi.tabs.create).not.toHaveBeenCalled();
-  });
-
-  it("falls back to a tab when the popup window cannot be opened", async () => {
-    const chromeApi = createFakeChrome();
-    const linkUrl = "magnet:?xt=urn:btih:test";
-    chromeApi.windows.create = vi.fn((_properties, callback?: () => void) => {
-      chromeApi.runtime.lastError = { message: "Window blocked" } as chrome.runtime.LastError;
-      callback?.();
-      delete chromeApi.runtime.lastError;
-    }) as unknown as typeof chrome.windows.create;
-
-    await handleDownloadLinkContextMenuClick(
-      { menuItemId: ADD_TO_DOWNLOAD_STATION_MENU_ID, linkUrl } as chrome.contextMenus.OnClickData,
-      chromeApi
-    );
-
-    const expectedUrl = `chrome-extension://extension-id/index.html?${new URLSearchParams({ view: "add", uri: linkUrl }).toString()}`;
-    expect(chromeApi.tabs.create).toHaveBeenCalledWith({ url: expectedUrl, active: true }, expect.any(Function));
   });
 
   it("ignores unsupported links", async () => {

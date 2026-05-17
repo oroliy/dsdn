@@ -32,6 +32,15 @@ export function createMessageHandler(deps: { storage: StorageAdapter; session: S
           return ok(null);
         case "tasks.list":
           return ok(await deps.session.listTasks());
+        case "tasks.pause":
+          await deps.session.pauseTask(request.id);
+          return ok(null);
+        case "tasks.resume":
+          await deps.session.resumeTask(request.id);
+          return ok(null);
+        case "tasks.delete":
+          await deps.session.deleteTask(request.id);
+          return ok(null);
         case "destinations.list":
           return ok(await deps.session.listDestinations());
         case "downloads.create":

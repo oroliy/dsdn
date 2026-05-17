@@ -1,49 +1,63 @@
 import { debugLog } from "../shared/debug";
 import { buildAddDownloadPagePath, isSupportedDownloadUri } from "../shared/downloadUris";
+import type { Locale } from "../shared/types";
 
 export const ADD_TO_DOWNLOAD_STATION_MENU_ID = "add-to-download-station";
 
-type LinkContextMenuChrome = Pick<typeof chrome, "contextMenus" | "runtime" | "tabs" | "windows">;
+type LinkContextMenuChrome = Pick<typeof chrome, "action" | "contextMenus" | "runtime" | "tabs" | "windows">;
+export type LinkContextMenuDeps = {
+  getLocale: () => Promise<Locale | null>;
+};
 
-const MENU_TITLE = "Add to Download Station / 添加到 Download Station";
 const POPUP_WIDTH = 420;
 const POPUP_HEIGHT = 720;
+const DEFAULT_POPUP_PATH = "index.html";
 
-export function registerDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome): void {
-  chromeApi.runtime.onInstalled.addListener(() => createDownloadLinkContextMenu(chromeApi));
+export function registerDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome, deps: LinkContextMenuDeps): void {
+  chromeApi.runtime.onInstalled.addListener(() => {
+    void createDownloadLinkContextMenu(chromeApi, deps);
+  });
   chromeApi.contextMenus.onClicked.addListener((info) => {
     void handleDownloadLinkContextMenuClick(info, chromeApi);
   });
+  void createDownloadLinkContextMenu(chromeApi, deps);
   debugLog("browser downloader", "context menu handlers registered", {
     menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
     contexts: ["link"]
   });
 }
 
-export function createDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome): void {
-  chromeApi.contextMenus.removeAll(() => {
-    chromeApi.contextMenus.create(
-      {
-        id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
-        title: MENU_TITLE,
-        contexts: ["link"]
-      },
-      () => {
-        const errorMessage = chromeApi.runtime.lastError?.message;
-        if (errorMessage) {
-          debugLog("browser downloader", "context menu unavailable", {
-            menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
-            message: errorMessage
-          });
-          return;
-        }
-        debugLog("browser downloader", "context menu ready", {
-          menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
-          title: MENU_TITLE,
+export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome, deps: LinkContextMenuDeps): Promise<void> {
+  const locale = (await deps.getLocale()) ?? "en";
+  const title = getMenuTitle(locale);
+
+  return new Promise((resolve) => {
+    chromeApi.contextMenus.removeAll(() => {
+      chromeApi.contextMenus.create(
+        {
+          id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
+          title,
           contexts: ["link"]
-        });
-      }
-    );
+        },
+        () => {
+          const errorMessage = chromeApi.runtime.lastError?.message;
+          if (errorMessage) {
+            debugLog("browser downloader", "context menu unavailable", {
+              menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
+              message: errorMessage
+            });
+            resolve();
+            return;
+          }
+          debugLog("browser downloader", "context menu ready", {
+            menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
+            title,
+            contexts: ["link"]
+          });
+          resolve();
+        }
+      );
+    });
   });
 }
 
@@ -64,15 +78,33 @@ export async function handleDownloadLinkContextMenuClick(
     return;
   }
 
-  const extensionUrl = chromeApi.runtime.getURL(buildAddDownloadPagePath(linkUrl));
-  const openedInWindow = await openAddDownloadWindow(chromeApi, extensionUrl);
-  if (openedInWindow) {
-    debugLog("browser downloader", "opened add download popup window", { url: extensionUrl });
+  const popupPath = buildAddDownloadPagePath(linkUrl);
+  const openedInActionPopup = await openAddDownloadActionPopup(chromeApi, popupPath);
+  if (openedInActionPopup) {
+    debugLog("browser downloader", "opened add download action popup", { popup: popupPath });
     return;
   }
 
-  await openAddDownloadTab(chromeApi, extensionUrl);
-  debugLog("browser downloader", "opened add download fallback tab", { url: extensionUrl });
+  const extensionUrl = chromeApi.runtime.getURL(popupPath);
+  await openAddDownloadWindow(chromeApi, extensionUrl);
+  debugLog("browser downloader", "opened add download fallback window", { url: extensionUrl });
+}
+
+async function openAddDownloadActionPopup(chromeApi: LinkContextMenuChrome, popupPath: string): Promise<boolean> {
+  try {
+    await chromeApi.action.setPopup({ popup: popupPath });
+    await chromeApi.action.openPopup();
+    return true;
+  } catch (error) {
+    debugLog("browser downloader", "action popup unavailable", { message: error instanceof Error ? error.message : String(error) });
+    return false;
+  } finally {
+    try {
+      await chromeApi.action.setPopup({ popup: DEFAULT_POPUP_PATH });
+    } catch (error) {
+      debugLog("browser downloader", "default popup restore failed", { message: error instanceof Error ? error.message : String(error) });
+    }
+  }
 }
 
 async function openAddDownloadWindow(chromeApi: LinkContextMenuChrome, url: string): Promise<boolean> {
@@ -103,14 +135,6 @@ async function openAddDownloadWindow(chromeApi: LinkContextMenuChrome, url: stri
   });
 }
 
-async function openAddDownloadTab(chromeApi: LinkContextMenuChrome, url: string): Promise<void> {
-  return new Promise((resolve) => {
-    chromeApi.tabs.create({ url, active: true }, () => {
-      const errorMessage = chromeApi.runtime.lastError?.message;
-      if (errorMessage) {
-        debugLog("browser downloader", "fallback tab failed", { message: errorMessage });
-      }
-      resolve();
-    });
-  });
+function getMenuTitle(locale: Locale): string {
+  return locale === "zh" ? "添加到 Download Station" : "Add to Download Station";
 }

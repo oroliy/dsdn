@@ -8,6 +8,9 @@ export type ExtensionRequest =
   | { type: "session.connect" }
   | { type: "session.disconnect" }
   | { type: "tasks.list" }
+  | { type: "tasks.pause"; id: string }
+  | { type: "tasks.resume"; id: string }
+  | { type: "tasks.delete"; id: string }
   | { type: "destinations.list" }
   | { type: "downloads.create"; uris: string[]; destination?: string };
 
@@ -21,6 +24,9 @@ export type ExtensionResponseMap = {
   "session.connect": null;
   "session.disconnect": null;
   "tasks.list": DownloadTask[];
+  "tasks.pause": null;
+  "tasks.resume": null;
+  "tasks.delete": null;
   "destinations.list": DestinationOption[];
   "downloads.create": { created: number };
 };
@@ -33,6 +39,9 @@ const REQUEST_TYPES = new Set<ExtensionRequest["type"]>([
   "session.connect",
   "session.disconnect",
   "tasks.list",
+  "tasks.pause",
+  "tasks.resume",
+  "tasks.delete",
   "destinations.list",
   "downloads.create"
 ]);

@@ -61,6 +61,20 @@ describe("createSessionManager", () => {
 
     expect(client.listDestinations).toHaveBeenCalledWith("SID123", "user", "pass");
   });
+
+  it("controls tasks through the current session", async () => {
+    const client = fakeClient();
+    const storage = fakeStorage({ sid: "SID123", createdAt: 1 });
+    const session = createSessionManager({ storage, clientFactory: () => client });
+
+    await session.pauseTask("dbid_1");
+    await session.resumeTask("dbid_1");
+    await session.deleteTask("dbid_1");
+
+    expect(client.pauseTask).toHaveBeenCalledWith("SID123", "dbid_1");
+    expect(client.resumeTask).toHaveBeenCalledWith("SID123", "dbid_1");
+    expect(client.deleteTask).toHaveBeenCalledWith("SID123", "dbid_1");
+  });
 });
 
 function fakeClient() {
@@ -69,6 +83,9 @@ function fakeClient() {
     logout: vi.fn(async () => undefined),
     listTasks: vi.fn(async () => []),
     listDestinations: vi.fn(async () => [{ value: "Download", label: "Download" }]),
+    pauseTask: vi.fn(async () => undefined),
+    resumeTask: vi.fn(async () => undefined),
+    deleteTask: vi.fn(async () => undefined),
     createDownload: vi.fn(async () => ({ created: 1 }))
   };
 }

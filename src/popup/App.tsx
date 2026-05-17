@@ -57,7 +57,7 @@ export function App() {
     void sendMessage({ type: "locale.save", locale: nextLocale });
   }
 
-  async function loadTasks() {
+  async function loadTasks(): Promise<DownloadTask[] | null> {
     setLoading(true);
     setError(null);
     const response = await sendMessage({ type: "tasks.list" });
@@ -67,9 +67,10 @@ export function App() {
       if (response.error.code === "auth_failed" || response.error.code === "settings_missing") {
         setView("setup");
       }
-      return;
+      return null;
     }
     setTasks(response.data);
+    return response.data;
   }
 
   async function openAddView(initialUris: string[] = []) {
@@ -131,8 +132,46 @@ export function App() {
       return;
     }
     setAddInitialUris([]);
+    if (addInitialUris.length > 0) {
+      window.close();
+      return;
+    }
     setView("tasks");
     await loadTasks();
+  }
+
+  async function pauseTask(task: DownloadTask) {
+    await controlTask(task, "tasks.pause");
+  }
+
+  async function resumeTask(task: DownloadTask) {
+    await controlTask(task, "tasks.resume");
+  }
+
+  async function deleteTask(task: DownloadTask) {
+    setLoading(true);
+    setError(null);
+    const response = await sendMessage({ type: "tasks.delete", id: task.id });
+    setLoading(false);
+    if (!response.ok) {
+      setError(response.error.message);
+      return;
+    }
+    setSelectedTask(null);
+    await loadTasks();
+  }
+
+  async function controlTask(task: DownloadTask, type: "tasks.pause" | "tasks.resume") {
+    setLoading(true);
+    setError(null);
+    const response = await sendMessage({ type, id: task.id });
+    setLoading(false);
+    if (!response.ok) {
+      setError(response.error.message);
+      return;
+    }
+    const nextTasks = await loadTasks();
+    setSelectedTask(nextTasks?.find((item) => item.id === task.id) ?? null);
   }
 
   if (view === "loading") {
@@ -184,7 +223,12 @@ export function App() {
       <main className="popup-shell">
         <TaskDetail
           task={selectedTask}
+          loading={loading}
+          error={error}
           onBack={() => setSelectedTask(null)}
+          onPause={pauseTask}
+          onResume={resumeTask}
+          onDelete={deleteTask}
           languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
           t={t}
         />
@@ -232,17 +276,29 @@ function LanguageSelect({ locale, onLocaleChange, t }: { locale: Locale; onLocal
 
 function TaskDetail({
   task,
+  loading,
+  error,
   onBack,
+  onPause,
+  onResume,
+  onDelete,
   languageControl,
   t
 }: {
   task: DownloadTask;
+  loading: boolean;
+  error: string | null;
   onBack: () => void;
+  onPause: (task: DownloadTask) => Promise<void>;
+  onResume: (task: DownloadTask) => Promise<void>;
+  onDelete: (task: DownloadTask) => Promise<void>;
   languageControl?: ReactNode;
   t: Messages;
 }) {
   const createdAt = task.createdAt ? new Date(task.createdAt * 1000).toLocaleString() : t.unknown;
   const completedAt = task.completedAt ? new Date(task.completedAt * 1000).toLocaleString() : t.unknown;
+  const isFinished = task.status === "finished";
+  const isPaused = task.status === "paused";
 
   return (
     <section className="panel">
@@ -311,6 +367,22 @@ function TaskDetail({
         </div>
       </dl>
       {task.error ? <p className="error">{task.error}</p> : null}
+      {error ? <p className="error">{error}</p> : null}
+      <div className="detail-actions">
+        {!isFinished && !isPaused ? (
+          <button type="button" disabled={loading} onClick={() => void onPause(task)}>
+            {t.pauseTask}
+          </button>
+        ) : null}
+        {!isFinished && isPaused ? (
+          <button type="button" disabled={loading} onClick={() => void onResume(task)}>
+            {t.resumeTask}
+          </button>
+        ) : null}
+        <button type="button" className="danger" disabled={loading} onClick={() => void onDelete(task)}>
+          {t.deleteTask}
+        </button>
+      </div>
     </section>
   );
 }

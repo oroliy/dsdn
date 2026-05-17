@@ -179,4 +179,116 @@ describe("App", () => {
     expect(screen.getByLabelText("URLs or magnet links")).toHaveValue("magnet:?xt=urn:btih:test");
     expect(sendMessage).toHaveBeenCalledWith({ type: "destinations.list" });
   });
+
+  it("closes the browser link popup after creating a prefilled download", async () => {
+    window.history.pushState({}, "", "/?view=add&uri=https%3A%2F%2Fexample.com%2Ffile.iso");
+    const close = vi.spyOn(window, "close").mockImplementation(() => undefined);
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({ ok: true, data: [] })
+      .mockResolvedValueOnce({ ok: true, data: { created: 1 } });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add download" }));
+
+    await waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "downloads.create", uris: ["https://example.com/file.iso"], destination: undefined })
+    );
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("shows pause and delete actions for active task details", async () => {
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "ubuntu.iso",
+            status: "downloading",
+            progress: 25,
+            downloadedBytes: 512,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 1024,
+            uploadSpeed: 0
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "ubuntu.iso",
+            status: "paused",
+            progress: 25,
+            downloadedBytes: 512,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 0,
+            uploadSpeed: 0
+          }
+        ]
+      });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByText("ubuntu.iso"));
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Pause" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "tasks.pause", id: "1" }));
+    expect(await screen.findByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
+
+  it("shows only delete for finished task details", async () => {
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "done.iso",
+            status: "finished",
+            progress: 100,
+            downloadedBytes: 2048,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 0,
+            uploadSpeed: 0
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: [] });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByText("done.iso"));
+    expect(screen.queryByRole("button", { name: "Pause" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "tasks.delete", id: "1" }));
+    expect(await screen.findByText("No active downloads.")).toBeInTheDocument();
+  });
 });

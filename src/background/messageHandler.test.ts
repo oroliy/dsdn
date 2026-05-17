@@ -49,6 +49,19 @@ describe("createMessageHandler", () => {
     });
   });
 
+  it("routes task control requests", async () => {
+    const deps = fakeDeps();
+    const handle = createMessageHandler(deps);
+
+    await expect(handle({ type: "tasks.pause", id: "dbid_1" })).resolves.toEqual({ ok: true, data: null });
+    await expect(handle({ type: "tasks.resume", id: "dbid_1" })).resolves.toEqual({ ok: true, data: null });
+    await expect(handle({ type: "tasks.delete", id: "dbid_1" })).resolves.toEqual({ ok: true, data: null });
+
+    expect(deps.session.pauseTask).toHaveBeenCalledWith("dbid_1");
+    expect(deps.session.resumeTask).toHaveBeenCalledWith("dbid_1");
+    expect(deps.session.deleteTask).toHaveBeenCalledWith("dbid_1");
+  });
+
   it("routes locale get and save through local storage", async () => {
     const deps = fakeDeps();
     deps.storage.getLocale.mockResolvedValue("zh");
@@ -85,6 +98,9 @@ function fakeDeps() {
       disconnect: vi.fn(async () => undefined),
       listTasks: vi.fn(async (): Promise<DownloadTask[]> => []),
       listDestinations: vi.fn(async (): Promise<DestinationOption[]> => []),
+      pauseTask: vi.fn(async () => undefined),
+      resumeTask: vi.fn(async () => undefined),
+      deleteTask: vi.fn(async () => undefined),
       createDownload: vi.fn(async () => ({ created: 1 }))
     }
   };

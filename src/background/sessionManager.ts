@@ -37,6 +37,18 @@ export function createSessionManager(deps: {
     return withSession((client, session) => client.createDownload(session.sid, uris, destination));
   }
 
+  async function pauseTask(id: string): Promise<void> {
+    return withSession((client, session) => client.pauseTask(session.sid, id));
+  }
+
+  async function resumeTask(id: string): Promise<void> {
+    return withSession((client, session) => client.resumeTask(session.sid, id));
+  }
+
+  async function deleteTask(id: string): Promise<void> {
+    return withSession((client, session) => client.deleteTask(session.sid, id));
+  }
+
   async function listDestinations(): Promise<DestinationOption[]> {
     return withSession((client, session, settings) => client.listDestinations(session.sid, settings.username, settings.password));
   }
@@ -75,5 +87,5 @@ export function createSessionManager(deps: {
     return settings;
   }
 
-  return { connect, disconnect, listTasks, listDestinations, createDownload };
+  return { connect, disconnect, listTasks, listDestinations, createDownload, pauseTask, resumeTask, deleteTask };
 }
