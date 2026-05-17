@@ -154,14 +154,15 @@ export function App() {
   }
 
   async function pauseTask(task: DownloadTask) {
-    await controlTask(task, "tasks.pause");
+    await controlTask(task, "tasks.pause", { updateSelectedTask: true });
   }
 
   async function resumeTask(task: DownloadTask) {
-    await controlTask(task, "tasks.resume");
+    await controlTask(task, "tasks.resume", { updateSelectedTask: true });
   }
 
   async function deleteTask(task: DownloadTask) {
+    if (!window.confirm(t.confirmDeleteTask)) return;
     setLoading(true);
     setError(null);
     const response = await sendMessage({ type: "tasks.delete", id: task.id });
@@ -174,7 +175,11 @@ export function App() {
     await loadTasks();
   }
 
-  async function controlTask(task: DownloadTask, type: "tasks.pause" | "tasks.resume") {
+  async function controlTask(
+    task: DownloadTask,
+    type: "tasks.pause" | "tasks.resume",
+    options: { updateSelectedTask: boolean }
+  ) {
     setLoading(true);
     setError(null);
     const response = await sendMessage({ type, id: task.id });
@@ -184,16 +189,18 @@ export function App() {
       return;
     }
     const nextTasks = await loadTasks();
-    setSelectedTask(nextTasks?.find((item) => item.id === task.id) ?? null);
+    if (options.updateSelectedTask) {
+      setSelectedTask(nextTasks?.find((item) => item.id === task.id) ?? null);
+    }
   }
 
   async function controlTaskFromList(task: DownloadTask, action: "pause" | "resume" | "delete") {
     if (action === "pause") {
-      await pauseTask(task);
+      await controlTask(task, "tasks.pause", { updateSelectedTask: false });
       return;
     }
     if (action === "resume") {
-      await resumeTask(task);
+      await controlTask(task, "tasks.resume", { updateSelectedTask: false });
       return;
     }
     await deleteTask(task);

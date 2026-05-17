@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import type { Messages } from "./i18n";
 import type { DownloadTask } from "../shared/types";
@@ -25,7 +25,9 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
   const [taskMenu, setTaskMenu] = useState<TaskMenuState>(null);
   const visibleTasks = useMemo(() => sortTasks(filterTasks(tasks, filter), sortBy, sortDirection), [tasks, filter, sortBy, sortDirection]);
 
-  async function runTaskAction(task: DownloadTask, action: TaskAction) {
+  async function runTaskAction(event: MouseEvent<HTMLButtonElement>, task: DownloadTask, action: TaskAction) {
+    event.preventDefault();
+    event.stopPropagation();
     setTaskMenu(null);
     await onTaskAction?.(task, action);
   }
@@ -92,6 +94,7 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
             onContextMenu={(event) => {
               if (!onTaskAction) return;
               event.preventDefault();
+              event.stopPropagation();
               setTaskMenu({ task, x: event.clientX, y: event.clientY });
             }}
             onKeyDown={(event) => {
@@ -129,16 +132,21 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
       {taskMenu ? (
         <div className="task-context-menu" role="menu" style={{ left: taskMenu.x, top: taskMenu.y }}>
           {taskMenu.task.status !== "finished" && taskMenu.task.status !== "paused" ? (
-            <button type="button" role="menuitem" onClick={() => void runTaskAction(taskMenu.task, "pause")}>
+            <button type="button" role="menuitem" onClick={(event) => void runTaskAction(event, taskMenu.task, "pause")}>
               {t.pauseTask}
             </button>
           ) : null}
           {taskMenu.task.status === "paused" ? (
-            <button type="button" role="menuitem" onClick={() => void runTaskAction(taskMenu.task, "resume")}>
+            <button type="button" role="menuitem" onClick={(event) => void runTaskAction(event, taskMenu.task, "resume")}>
               {t.resumeTask}
             </button>
           ) : null}
-          <button type="button" role="menuitem" className="danger" onClick={() => void runTaskAction(taskMenu.task, "delete")}>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger"
+            onClick={(event) => void runTaskAction(event, taskMenu.task, "delete")}
+          >
             {t.deleteTask}
           </button>
         </div>

@@ -42,6 +42,7 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
           id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
           title,
           contexts: ["link"],
+          documentUrlPatterns: ["http://*/*", "https://*/*"],
           visible: false
         },
         () => {

@@ -324,7 +324,127 @@ describe("App", () => {
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "tasks.pause", id: "1" }));
   });
 
+  it("keeps the task list open after a row context pause action", async () => {
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "ubuntu.iso",
+            status: "downloading",
+            progress: 25,
+            downloadedBytes: 512,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 1024,
+            uploadSpeed: 0
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "ubuntu.iso",
+            status: "paused",
+            progress: 25,
+            downloadedBytes: 512,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 0,
+            uploadSpeed: 0
+          }
+        ]
+      });
+
+    render(<App />);
+
+    fireEvent.contextMenu(await screen.findByText("ubuntu.iso"));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Pause" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "tasks.pause", id: "1" }));
+    expect(screen.queryByText("Task details")).not.toBeInTheDocument();
+    expect(await screen.findByText("ubuntu.iso")).toBeInTheDocument();
+  });
+
+  it("does not delete a row context task when confirmation is cancelled", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "ubuntu.iso",
+            status: "finished",
+            progress: 100,
+            downloadedBytes: 2048,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 0,
+            uploadSpeed: 0
+          }
+        ]
+      });
+
+    render(<App />);
+
+    fireEvent.contextMenu(await screen.findByText("ubuntu.iso"));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    expect(confirm).toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalledWith({ type: "tasks.delete", id: "1" });
+  });
+
+  it("does not delete a detail task when confirmation is cancelled", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "done.iso",
+            status: "finished",
+            progress: 100,
+            downloadedBytes: 2048,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 0,
+            uploadSpeed: 0
+          }
+        ]
+      });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByText("done.iso"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(confirm).toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalledWith({ type: "tasks.delete", id: "1" });
+  });
+
   it("shows only delete for finished task details", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     sendMessage
       .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({

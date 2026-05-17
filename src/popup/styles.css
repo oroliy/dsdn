@@ -222,19 +222,20 @@ button.danger {
   position: fixed;
   z-index: 10;
   display: flex;
-  min-width: 118px;
+  min-width: 160px;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   border: 1px solid #cbd3df;
   border-radius: 6px;
-  padding: 5px;
+  padding: 8px;
   background: #fff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
 }
 
 .task-context-menu button {
   width: 100%;
-  padding: 7px 9px;
+  min-height: 36px;
+  padding: 9px 12px;
   text-align: left;
 }
 

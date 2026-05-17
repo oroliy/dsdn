@@ -71,6 +71,7 @@ describe("link context menu", () => {
         id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
         title: "Add to Download Station",
         contexts: ["link"],
+        documentUrlPatterns: ["http://*/*", "https://*/*"],
         visible: false
       },
       expect.any(Function)
