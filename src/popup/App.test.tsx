@@ -107,6 +107,8 @@ describe("App", () => {
     await userEvent.click(await screen.findByText("ubuntu.iso"));
 
     expect(await screen.findByText("Task details")).toBeInTheDocument();
+    expect(screen.getByText("Finished").closest(".detail-list")).not.toBeNull();
+    expect(screen.getByText("ubuntu.iso").closest(".detail-title")?.querySelector(".status")).toBeNull();
     expect(screen.getByText("Download")).toBeInTheDocument();
     expect(screen.getByText("https://example.com/ubuntu.iso")).toBeInTheDocument();
     expect(screen.getAllByText("2.0 KB").length).toBeGreaterThan(0);

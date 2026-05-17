@@ -219,9 +219,14 @@ function TaskDetail({
       </div>
       <div className="detail-title">
         <strong>{task.title}</strong>
-        <span className={`status status-${task.status}`}>{translateStatus(task.status, t)}</span>
       </div>
       <dl className="detail-list">
+        <div>
+          <dt>{t.status}</dt>
+          <dd>
+            <span className={`status status-${task.status}`}>{translateStatus(task.status, t)}</span>
+          </dd>
+        </div>
         <div>
           <dt>ID</dt>
           <dd>{task.id}</dd>

@@ -278,6 +278,13 @@ button.secondary {
   background: #fff;
 }
 
+.detail-title strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .detail-list {
   display: flex;
   flex-direction: column;
