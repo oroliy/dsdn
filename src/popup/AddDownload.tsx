@@ -7,6 +7,7 @@ import type { DestinationOption } from "../shared/types";
 type AddDownloadProps = {
   loading: boolean;
   error: string | null;
+  notice?: { type: "success" | "error"; message: string } | null;
   initialUris?: string[];
   destinations?: DestinationOption[];
   onCancel: () => void;
@@ -15,7 +16,17 @@ type AddDownloadProps = {
   t: Messages;
 };
 
-export function AddDownload({ loading, error, initialUris = [], destinations = [], onCancel, onCreate, languageControl, t }: AddDownloadProps) {
+export function AddDownload({
+  loading,
+  error,
+  notice,
+  initialUris = [],
+  destinations = [],
+  onCancel,
+  onCreate,
+  languageControl,
+  t
+}: AddDownloadProps) {
   const initialInput = initialUris.join("\n");
   const [input, setInput] = useState(initialInput);
   const [destination, setDestination] = useState("");
@@ -82,6 +93,7 @@ export function AddDownload({ loading, error, initialUris = [], destinations = [
         </label>
       ) : null}
       {invalidUris.length > 0 ? <p className="error">{t.invalidDownloadUri}</p> : null}
+      {notice ? <p className={notice.type === "success" ? "notice success" : "error"}>{notice.message}</p> : null}
       {error ? <p className="error">{error}</p> : null}
       <button type="submit" disabled={!canSubmit}>
         {loading ? t.adding : t.addDownload}

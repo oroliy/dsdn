@@ -26,6 +26,7 @@ export function App() {
   const [destinations, setDestinations] = useState<DestinationOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createNotice, setCreateNotice] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -77,6 +78,7 @@ export function App() {
     setAddInitialUris(initialUris);
     setView("add");
     setError(null);
+    setCreateNotice(null);
     const response = await sendMessage({ type: "destinations.list" });
     if (!response.ok) {
       setError(response.error.message);
@@ -88,6 +90,7 @@ export function App() {
 
   function closeAddView() {
     setAddInitialUris([]);
+    setCreateNotice(null);
     setView("tasks");
     void loadTasks();
   }
@@ -123,16 +126,26 @@ export function App() {
   }
 
   async function createDownload(uris: string[], destination?: string) {
+    const shouldCloseAfterStatus = addInitialUris.length > 0;
     setLoading(true);
     setError(null);
+    setCreateNotice(null);
     const response = await sendMessage({ type: "downloads.create", uris, destination });
     setLoading(false);
     if (!response.ok) {
+      if (shouldCloseAfterStatus) {
+        setCreateNotice({ type: "error", message: `${t.createFailed}: ${response.error.message}` });
+        await delay(1500);
+        window.close();
+        return;
+      }
       setError(response.error.message);
       return;
     }
     setAddInitialUris([]);
-    if (addInitialUris.length > 0) {
+    if (shouldCloseAfterStatus) {
+      setCreateNotice({ type: "success", message: t.downloadCreated });
+      await delay(1200);
       window.close();
       return;
     }
@@ -174,6 +187,18 @@ export function App() {
     setSelectedTask(nextTasks?.find((item) => item.id === task.id) ?? null);
   }
 
+  async function controlTaskFromList(task: DownloadTask, action: "pause" | "resume" | "delete") {
+    if (action === "pause") {
+      await pauseTask(task);
+      return;
+    }
+    if (action === "resume") {
+      await resumeTask(task);
+      return;
+    }
+    await deleteTask(task);
+  }
+
   if (view === "loading") {
     return (
       <main className="popup-shell">
@@ -207,6 +232,7 @@ export function App() {
         <AddDownload
           loading={loading}
           error={error}
+          notice={createNotice}
           initialUris={addInitialUris}
           destinations={destinations}
           onCancel={closeAddView}
@@ -245,6 +271,7 @@ export function App() {
         onRefresh={loadTasks}
         onAddClick={() => void openAddView()}
         onTaskClick={setSelectedTask}
+        onTaskAction={controlTaskFromList}
         languageControl={<LanguageSelect locale={locale} onLocaleChange={changeLocale} t={t} />}
         t={t}
       />
@@ -260,6 +287,10 @@ function getInitialAddDownloadUris(): string[] {
   if (!uri || !isSupportedDownloadUri(uri)) return [];
 
   return [uri];
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function LanguageSelect({ locale, onLocaleChange, t }: { locale: Locale; onLocaleChange: (locale: Locale) => void; t: Messages }) {
@@ -295,10 +326,18 @@ function TaskDetail({
   languageControl?: ReactNode;
   t: Messages;
 }) {
+  const [copied, setCopied] = useState(false);
   const createdAt = task.createdAt ? new Date(task.createdAt * 1000).toLocaleString() : t.unknown;
   const completedAt = task.completedAt ? new Date(task.completedAt * 1000).toLocaleString() : t.unknown;
   const isFinished = task.status === "finished";
   const isPaused = task.status === "paused";
+
+  async function copyUri() {
+    if (!task.uri) return;
+    await navigator.clipboard.writeText(task.uri);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  }
 
   return (
     <section className="panel">
@@ -339,7 +378,14 @@ function TaskDetail({
         </div>
         <div>
           <dt>{t.uri}</dt>
-          <dd className="break-word">{task.uri ?? t.unknown}</dd>
+          <dd className="detail-uri">
+            <span className="break-word">{task.uri ?? t.unknown}</span>
+            {task.uri ? (
+              <button type="button" className="icon-button" aria-label={t.copyUri} title={t.copyUri} onClick={() => void copyUri()}>
+                ⧉
+              </button>
+            ) : null}
+          </dd>
         </div>
         <div>
           <dt>{t.created}</dt>
@@ -366,6 +412,12 @@ function TaskDetail({
           <dd>{formatBytes(task.totalBytes)}</dd>
         </div>
       </dl>
+      <div className="detail-progress">
+        <div className="progress" aria-label={`${task.title} detail progress`}>
+          <span style={{ width: `${task.progress}%` }} />
+        </div>
+      </div>
+      {copied ? <p className="notice success">{t.copied}</p> : null}
       {task.error ? <p className="error">{task.error}</p> : null}
       {error ? <p className="error">{error}</p> : null}
       <div className="detail-actions">

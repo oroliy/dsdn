@@ -10,15 +10,25 @@ type TaskListProps = {
   onRefresh: () => void;
   onAddClick: () => void;
   onTaskClick?: (task: DownloadTask) => void;
+  onTaskAction?: (task: DownloadTask, action: TaskAction) => Promise<void>;
   languageControl?: ReactNode;
   t: Messages;
 };
 
-export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskClick, languageControl, t }: TaskListProps) {
+type TaskAction = "pause" | "resume" | "delete";
+type TaskMenuState = { task: DownloadTask; x: number; y: number } | null;
+
+export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskClick, onTaskAction, languageControl, t }: TaskListProps) {
   const [sortBy, setSortBy] = useState<SortBy>("createdAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [filter, setFilter] = useState<TaskFilter>("all");
+  const [taskMenu, setTaskMenu] = useState<TaskMenuState>(null);
   const visibleTasks = useMemo(() => sortTasks(filterTasks(tasks, filter), sortBy, sortDirection), [tasks, filter, sortBy, sortDirection]);
+
+  async function runTaskAction(task: DownloadTask, action: TaskAction) {
+    setTaskMenu(null);
+    await onTaskAction?.(task, action);
+  }
 
   return (
     <section className="panel">
@@ -79,6 +89,11 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
             className={onTaskClick ? "task task-clickable" : "task"}
             key={task.id}
             onClick={() => onTaskClick?.(task)}
+            onContextMenu={(event) => {
+              if (!onTaskAction) return;
+              event.preventDefault();
+              setTaskMenu({ task, x: event.clientX, y: event.clientY });
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
@@ -111,6 +126,23 @@ export function TaskList({ tasks, loading, error, onRefresh, onAddClick, onTaskC
           </article>
         ))}
       </div>
+      {taskMenu ? (
+        <div className="task-context-menu" role="menu" style={{ left: taskMenu.x, top: taskMenu.y }}>
+          {taskMenu.task.status !== "finished" && taskMenu.task.status !== "paused" ? (
+            <button type="button" role="menuitem" onClick={() => void runTaskAction(taskMenu.task, "pause")}>
+              {t.pauseTask}
+            </button>
+          ) : null}
+          {taskMenu.task.status === "paused" ? (
+            <button type="button" role="menuitem" onClick={() => void runTaskAction(taskMenu.task, "resume")}>
+              {t.resumeTask}
+            </button>
+          ) : null}
+          <button type="button" role="menuitem" className="danger" onClick={() => void runTaskAction(taskMenu.task, "delete")}>
+            {t.deleteTask}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

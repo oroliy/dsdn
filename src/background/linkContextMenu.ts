@@ -8,6 +8,10 @@ type LinkContextMenuChrome = Pick<typeof chrome, "action" | "contextMenus" | "ru
 export type LinkContextMenuDeps = {
   getLocale: () => Promise<Locale | null>;
 };
+type BrowserLinkContextMenuTargetRequest = {
+  type: "browserLink.contextMenuTarget";
+  href: string | null;
+};
 
 const POPUP_WIDTH = 420;
 const POPUP_HEIGHT = 720;
@@ -37,7 +41,8 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
         {
           id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
           title,
-          contexts: ["link"]
+          contexts: ["link"],
+          visible: false
         },
         () => {
           const errorMessage = chromeApi.runtime.lastError?.message;
@@ -59,6 +64,30 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
       );
     });
   });
+}
+
+export async function setDownloadLinkContextMenuVisibility(chromeApi: LinkContextMenuChrome, href: string | null): Promise<void> {
+  const visible = Boolean(href && isSupportedDownloadUri(href));
+  return new Promise((resolve) => {
+    chromeApi.contextMenus.update(ADD_TO_DOWNLOAD_STATION_MENU_ID, { visible }, () => {
+      const errorMessage = chromeApi.runtime.lastError?.message;
+      if (errorMessage) {
+        debugLog("browser downloader", "context menu visibility update failed", { message: errorMessage, visible });
+      }
+      resolve();
+    });
+  });
+}
+
+export function isBrowserLinkContextMenuTargetRequest(value: unknown): value is BrowserLinkContextMenuTargetRequest {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "type" in value &&
+      value.type === "browserLink.contextMenuTarget" &&
+      "href" in value &&
+      (typeof value.href === "string" || value.href === null)
+  );
 }
 
 export async function handleDownloadLinkContextMenuClick(

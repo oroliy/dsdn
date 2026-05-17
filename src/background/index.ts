@@ -1,5 +1,10 @@
 import { createMessageHandler } from "./messageHandler";
-import { createDownloadLinkContextMenu, registerDownloadLinkContextMenu } from "./linkContextMenu";
+import {
+  createDownloadLinkContextMenu,
+  isBrowserLinkContextMenuTargetRequest,
+  registerDownloadLinkContextMenu,
+  setDownloadLinkContextMenuVisibility
+} from "./linkContextMenu";
 import { createSessionManager } from "./sessionManager";
 import { createStorageAdapter } from "./storage";
 import { createSynologyClient } from "./synologyClient";
@@ -15,6 +20,11 @@ const contextMenuDeps = {
 };
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  if (isBrowserLinkContextMenuTargetRequest(request)) {
+    setDownloadLinkContextMenuVisibility(chrome, request.href).then(() => sendResponse({ ok: true, data: null }));
+    return true;
+  }
+
   handleMessage(request).then((response) => {
     sendResponse(response);
     if (response.ok && isLocaleSaveRequest(request)) {

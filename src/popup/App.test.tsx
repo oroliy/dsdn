@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 const sendMessage = vi.fn();
@@ -13,6 +13,10 @@ describe("App", () => {
   beforeEach(() => {
     sendMessage.mockReset();
     window.history.pushState({}, "", "/");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders setup form when settings are missing", async () => {
@@ -79,7 +83,9 @@ describe("App", () => {
     );
   });
 
-  it("opens a task detail view from the task list", async () => {
+  it("opens a task detail view from the task list with copy and progress controls", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
     sendMessage
       .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({
@@ -116,6 +122,12 @@ describe("App", () => {
     expect(screen.getByText("Download")).toBeInTheDocument();
     expect(screen.getByText("https://example.com/ubuntu.iso")).toBeInTheDocument();
     expect(screen.getAllByText("2.0 KB").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("ubuntu.iso detail progress").querySelector("span")).toHaveStyle({ width: "100%" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy URI" }));
+
+    expect(writeText).toHaveBeenCalledWith("https://example.com/ubuntu.iso");
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
   });
 
   it("saves locale changes", async () => {
@@ -180,7 +192,7 @@ describe("App", () => {
     expect(sendMessage).toHaveBeenCalledWith({ type: "destinations.list" });
   });
 
-  it("closes the browser link popup after creating a prefilled download", async () => {
+  it("shows browser link creation success briefly before closing the popup", async () => {
     window.history.pushState({}, "", "/?view=add&uri=https%3A%2F%2Fexample.com%2Ffile.iso");
     const close = vi.spyOn(window, "close").mockImplementation(() => undefined);
     sendMessage
@@ -199,7 +211,29 @@ describe("App", () => {
     await waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({ type: "downloads.create", uris: ["https://example.com/file.iso"], destination: undefined })
     );
-    expect(close).toHaveBeenCalledOnce();
+    expect(await screen.findByText("Download created.")).toBeInTheDocument();
+    expect(close).not.toHaveBeenCalled();
+    await waitFor(() => expect(close).toHaveBeenCalledOnce(), { timeout: 2000 });
+  });
+
+  it("shows browser link creation failure briefly before closing the popup", async () => {
+    window.history.pushState({}, "", "/?view=add&uri=https%3A%2F%2Fexample.com%2Ffile.iso");
+    const close = vi.spyOn(window, "close").mockImplementation(() => undefined);
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({ ok: true, data: [] })
+      .mockResolvedValueOnce({ ok: false, error: { code: "400", message: "Synology rejected the task.", retryable: false } });
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add download" }));
+
+    expect(await screen.findByText("Create failed: Synology rejected the task.")).toBeInTheDocument();
+    await waitFor(() => expect(close).toHaveBeenCalledOnce(), { timeout: 2500 });
   });
 
   it("shows pause and delete actions for active task details", async () => {
@@ -253,6 +287,41 @@ describe("App", () => {
 
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "tasks.pause", id: "1" }));
     expect(await screen.findByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
+
+  it("opens task row context actions on right click", async () => {
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            id: "1",
+            title: "ubuntu.iso",
+            status: "downloading",
+            progress: 25,
+            downloadedBytes: 512,
+            uploadedBytes: 0,
+            totalBytes: 2048,
+            downloadSpeed: 1024,
+            uploadSpeed: 0
+          }
+        ]
+      })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: [] });
+
+    render(<App />);
+
+    fireEvent.contextMenu(await screen.findByText("ubuntu.iso"));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Pause" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "tasks.pause", id: "1" }));
   });
 
   it("shows only delete for finished task details", async () => {

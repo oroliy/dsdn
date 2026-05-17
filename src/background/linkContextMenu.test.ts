@@ -3,7 +3,8 @@ import {
   ADD_TO_DOWNLOAD_STATION_MENU_ID,
   createDownloadLinkContextMenu,
   handleDownloadLinkContextMenuClick,
-  registerDownloadLinkContextMenu
+  registerDownloadLinkContextMenu,
+  setDownloadLinkContextMenuVisibility
 } from "./linkContextMenu";
 
 type FakeChrome = Pick<typeof chrome, "action" | "contextMenus" | "runtime" | "tabs" | "windows">;
@@ -24,6 +25,7 @@ function createFakeChrome(): FakeChrome {
     contextMenus: {
       create: vi.fn((_properties, callback?: () => void) => callback?.()),
       removeAll: vi.fn((callback?: () => void) => callback?.()),
+      update: vi.fn((_id, _properties, callback?: () => void) => callback?.()),
       onClicked: {
         addListener: vi.fn()
       }
@@ -68,7 +70,8 @@ describe("link context menu", () => {
       {
         id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
         title: "Add to Download Station",
-        contexts: ["link"]
+        contexts: ["link"],
+        visible: false
       },
       expect.any(Function)
     );
@@ -83,6 +86,33 @@ describe("link context menu", () => {
       expect.objectContaining({
         title: "添加到 Download Station"
       }),
+      expect.any(Function)
+    );
+  });
+
+  it("shows the native menu only when the page reports a supported link", async () => {
+    const chromeApi = createFakeChrome();
+
+    await setDownloadLinkContextMenuVisibility(chromeApi, "https://example.com/file.iso");
+    await setDownloadLinkContextMenuVisibility(chromeApi, "javascript:alert(1)");
+    await setDownloadLinkContextMenuVisibility(chromeApi, null);
+
+    expect(chromeApi.contextMenus.update).toHaveBeenNthCalledWith(
+      1,
+      ADD_TO_DOWNLOAD_STATION_MENU_ID,
+      { visible: true },
+      expect.any(Function)
+    );
+    expect(chromeApi.contextMenus.update).toHaveBeenNthCalledWith(
+      2,
+      ADD_TO_DOWNLOAD_STATION_MENU_ID,
+      { visible: false },
+      expect.any(Function)
+    );
+    expect(chromeApi.contextMenus.update).toHaveBeenNthCalledWith(
+      3,
+      ADD_TO_DOWNLOAD_STATION_MENU_ID,
+      { visible: false },
       expect.any(Function)
     );
   });

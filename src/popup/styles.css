@@ -10,7 +10,7 @@
 
 body {
   margin: 0;
-  min-width: 360px;
+  min-width: 340px;
 }
 
 button,
@@ -21,8 +21,7 @@ textarea {
 }
 
 .popup-shell {
-  width: 360px;
-  min-height: 420px;
+  width: 340px;
   padding: 12px;
   background: #f7f8fb;
 }
@@ -193,6 +192,18 @@ button.danger {
   background: #ffe4e6;
 }
 
+.notice {
+  margin: 0;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.notice.success {
+  color: #166534;
+  background: #dcfce7;
+}
+
 .task-list {
   display: flex;
   flex-direction: column;
@@ -200,10 +211,31 @@ button.danger {
 }
 
 .task {
+  position: relative;
   border: 1px solid #d9e0ea;
   border-radius: 8px;
   padding: 10px;
   background: #fff;
+}
+
+.task-context-menu {
+  position: fixed;
+  z-index: 10;
+  display: flex;
+  min-width: 118px;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid #cbd3df;
+  border-radius: 6px;
+  padding: 5px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+}
+
+.task-context-menu button {
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
 }
 
 .task-clickable {
@@ -314,6 +346,27 @@ button.danger {
   color: #172033;
   font-size: 12px;
   font-weight: 650;
+}
+
+.detail-uri {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.icon-button {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: #172033;
+  background: #e6eaf0;
+  text-align: center;
+}
+
+.detail-progress {
+  margin-top: -2px;
 }
 
 .detail-actions {
