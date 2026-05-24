@@ -38,7 +38,7 @@ Single purpose:
 - `contextMenus`: Adds a right-click link action that opens the extension add-download page with the selected link prefilled.
 - `alarms`: Periodically checks active Download Station tasks in the background.
 - `notifications`: Shows a browser notification when a known download task finishes.
-- `http://*/` and `https://*/`: Allows users to connect to a Synology DSM server at a LAN, VPN, hostname, or custom domain chosen at runtime.
+- Optional `http://*/` and `https://*/` host access: Requested only after the user enters a DSM URL, and only for that configured DSM host. This lets the extension connect directly to a LAN, VPN, hostname, or custom-domain DSM server without requesting access to every website at install time.
 
 ## Privacy Disclosure
 
@@ -75,6 +75,7 @@ npm run package
    - The extension does not collect or sell user data.
    - DSM credentials are stored only in Chrome extension local storage.
    - Network requests go only to the DSM URL configured by the user.
+   - Host access is requested at runtime for the user-configured DSM host instead of during installation.
 6. Publish once manually.
 7. Record the Chrome Web Store extension ID and publisher ID.
 

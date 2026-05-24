@@ -8,15 +8,10 @@ type LinkContextMenuChrome = Pick<typeof chrome, "action" | "contextMenus" | "ru
 export type LinkContextMenuDeps = {
   getLocale: () => Promise<Locale | null>;
 };
-type BrowserLinkContextMenuTargetRequest = {
-  type: "browserLink.contextMenuTarget";
-  href: string | null;
-};
 
 const POPUP_WIDTH = 420;
 const POPUP_HEIGHT = 720;
 const DEFAULT_POPUP_PATH = "index.html";
-let currentContextMenuHref: string | null = null;
 
 export function registerDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome, deps: LinkContextMenuDeps): void {
   chromeApi.runtime.onInstalled.addListener(() => {
@@ -28,7 +23,7 @@ export function registerDownloadLinkContextMenu(chromeApi: LinkContextMenuChrome
   void createDownloadLinkContextMenu(chromeApi, deps);
   debugLog("browser downloader", "context menu handlers registered", {
     menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
-    contexts: ["all"]
+    contexts: ["link"]
   });
 }
 
@@ -42,9 +37,7 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
         {
           id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
           title,
-          contexts: ["all"],
-          documentUrlPatterns: ["http://*/*", "https://*/*"],
-          visible: false
+          contexts: ["link"]
         },
         () => {
           const errorMessage = chromeApi.runtime.lastError?.message;
@@ -59,48 +52,13 @@ export async function createDownloadLinkContextMenu(chromeApi: LinkContextMenuCh
           debugLog("browser downloader", "context menu ready", {
             menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
             title,
-            contexts: ["all"]
+            contexts: ["link"]
           });
           resolve();
         }
       );
     });
   });
-}
-
-export async function setDownloadLinkContextMenuVisibility(chromeApi: LinkContextMenuChrome, href: string | null): Promise<void> {
-  currentContextMenuHref = href && isSupportedDownloadUri(href) ? href.trim() : null;
-  const visible = Boolean(currentContextMenuHref);
-  debugLog("browser downloader", "context target updated", {
-    href: currentContextMenuHref ?? "(none)",
-    visible
-  });
-  return new Promise((resolve) => {
-    chromeApi.contextMenus.update(ADD_TO_DOWNLOAD_STATION_MENU_ID, { visible }, () => {
-      const errorMessage = chromeApi.runtime.lastError?.message;
-      if (errorMessage) {
-        debugLog("browser downloader", "context menu visibility update failed", { message: errorMessage, visible });
-      } else {
-        debugLog("browser downloader", "context menu visibility updated", {
-          menuId: ADD_TO_DOWNLOAD_STATION_MENU_ID,
-          href: currentContextMenuHref ?? "(none)",
-          visible
-        });
-      }
-      resolve();
-    });
-  });
-}
-
-export function isBrowserLinkContextMenuTargetRequest(value: unknown): value is BrowserLinkContextMenuTargetRequest {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      "type" in value &&
-      value.type === "browserLink.contextMenuTarget" &&
-      "href" in value &&
-      (typeof value.href === "string" || value.href === null)
-  );
 }
 
 export async function handleDownloadLinkContextMenuClick(
@@ -110,7 +68,7 @@ export async function handleDownloadLinkContextMenuClick(
   if (info.menuItemId !== ADD_TO_DOWNLOAD_STATION_MENU_ID) return;
 
   const linkUrlFromChrome = typeof info.linkUrl === "string" ? info.linkUrl.trim() : "";
-  const linkUrl = isSupportedDownloadUri(linkUrlFromChrome) ? linkUrlFromChrome : (currentContextMenuHref ?? "");
+  const linkUrl = isSupportedDownloadUri(linkUrlFromChrome) ? linkUrlFromChrome : "";
   debugLog("browser downloader", "link selected from context menu", { linkUrl });
 
   if (!isSupportedDownloadUri(linkUrl)) {

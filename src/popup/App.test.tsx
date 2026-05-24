@@ -17,6 +17,7 @@ describe("App", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    Reflect.deleteProperty(globalThis, "chrome");
   });
 
   it("renders setup form when settings are missing", async () => {
@@ -46,6 +47,60 @@ describe("App", () => {
 
     await waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "session.connect" }));
     expect(await screen.findByText("No active downloads.")).toBeInTheDocument();
+  });
+
+  it("requests access to the configured DSM host before saving settings", async () => {
+    const requestPermission = vi.fn((_permissions, callback: (granted: boolean) => void) => callback(true));
+    Object.defineProperty(globalThis, "chrome", {
+      value: {
+        permissions: {
+          request: requestPermission
+        }
+      },
+      configurable: true
+    });
+    sendMessage
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: [] })
+      .mockResolvedValueOnce({ ok: true, data: [] });
+
+    render(<App />);
+
+    await userEvent.type(await screen.findByLabelText("DSM URL"), "https://nas.local:5001");
+    await userEvent.type(screen.getByLabelText("Username"), "user");
+    await userEvent.type(screen.getByLabelText("Password"), "pass");
+    await userEvent.click(screen.getByRole("button", { name: "Save and connect" }));
+
+    await waitFor(() => expect(requestPermission).toHaveBeenCalledWith({ origins: ["https://nas.local/*"] }, expect.any(Function)));
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: "settings.save",
+      settings: { baseUrl: "https://nas.local:5001", username: "user", password: "pass" }
+    });
+  });
+
+  it("does not save settings when DSM host permission is denied", async () => {
+    Object.defineProperty(globalThis, "chrome", {
+      value: {
+        permissions: {
+          request: vi.fn((_permissions, callback: (granted: boolean) => void) => callback(false))
+        }
+      },
+      configurable: true
+    });
+    sendMessage.mockResolvedValueOnce({ ok: true, data: null }).mockResolvedValueOnce({ ok: true, data: null });
+
+    render(<App />);
+
+    await userEvent.type(await screen.findByLabelText("DSM URL"), "https://nas.local:5001");
+    await userEvent.type(screen.getByLabelText("Username"), "user");
+    await userEvent.type(screen.getByLabelText("Password"), "pass");
+    await userEvent.click(screen.getByRole("button", { name: "Save and connect" }));
+
+    expect(await screen.findByText("Chrome permission for this DSM host is required before connecting.")).toBeInTheDocument();
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "settings.save" }));
   });
 
   it("shows validation for invalid base url", async () => {

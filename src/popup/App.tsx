@@ -104,6 +104,13 @@ export function App() {
 
     setLoading(true);
     setError(null);
+    const permissionGranted = await ensureDsmHostPermission(nextSettings.baseUrl);
+    if (!permissionGranted) {
+      setLoading(false);
+      setError(t.dsmPermissionDenied);
+      return;
+    }
+
     const save = await sendMessage({ type: "settings.save", settings: nextSettings });
     if (!save.ok) {
       setLoading(false);
@@ -515,4 +522,20 @@ function validateSetupUrl(value: string, t: Messages): string | null {
   } catch {
     return t.enterValidUrl;
   }
+}
+
+async function ensureDsmHostPermission(baseUrl: string): Promise<boolean> {
+  const chromeApi = globalThis.chrome;
+  if (!chromeApi?.permissions?.request) return true;
+
+  return new Promise((resolve) => {
+    chromeApi.permissions.request({ origins: [toHostPermissionPattern(baseUrl)] }, (granted) => {
+      resolve(Boolean(granted));
+    });
+  });
+}
+
+function toHostPermissionPattern(baseUrl: string): string {
+  const url = new URL(baseUrl);
+  return `${url.protocol}//${url.hostname}/*`;
 }

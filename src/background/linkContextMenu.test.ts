@@ -3,8 +3,7 @@ import {
   ADD_TO_DOWNLOAD_STATION_MENU_ID,
   createDownloadLinkContextMenu,
   handleDownloadLinkContextMenuClick,
-  registerDownloadLinkContextMenu,
-  setDownloadLinkContextMenuVisibility
+  registerDownloadLinkContextMenu
 } from "./linkContextMenu";
 
 type FakeChrome = Pick<typeof chrome, "action" | "contextMenus" | "runtime" | "tabs" | "windows">;
@@ -60,7 +59,7 @@ describe("link context menu", () => {
     expect(chromeApi.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);
   });
 
-  it("creates the add-to-download-station menu item for supported content-script targets", async () => {
+  it("creates the add-to-download-station menu item for native link targets", async () => {
     const chromeApi = createFakeChrome();
 
     await createDownloadLinkContextMenu(chromeApi, fakeDeps("en"));
@@ -70,9 +69,7 @@ describe("link context menu", () => {
       {
         id: ADD_TO_DOWNLOAD_STATION_MENU_ID,
         title: "Add to Download Station",
-        contexts: ["all"],
-        documentUrlPatterns: ["http://*/*", "https://*/*"],
-        visible: false
+        contexts: ["link"]
       },
       expect.any(Function)
     );
@@ -89,42 +86,6 @@ describe("link context menu", () => {
       }),
       expect.any(Function)
     );
-  });
-
-  it("shows the native menu only when the page reports a supported link", async () => {
-    const chromeApi = createFakeChrome();
-
-    await setDownloadLinkContextMenuVisibility(chromeApi, "https://example.com/file.iso");
-    await setDownloadLinkContextMenuVisibility(chromeApi, "javascript:alert(1)");
-    await setDownloadLinkContextMenuVisibility(chromeApi, null);
-
-    expect(chromeApi.contextMenus.update).toHaveBeenNthCalledWith(
-      1,
-      ADD_TO_DOWNLOAD_STATION_MENU_ID,
-      { visible: true },
-      expect.any(Function)
-    );
-    expect(chromeApi.contextMenus.update).toHaveBeenNthCalledWith(
-      2,
-      ADD_TO_DOWNLOAD_STATION_MENU_ID,
-      { visible: false },
-      expect.any(Function)
-    );
-    expect(chromeApi.contextMenus.update).toHaveBeenNthCalledWith(
-      3,
-      ADD_TO_DOWNLOAD_STATION_MENU_ID,
-      { visible: false },
-      expect.any(Function)
-    );
-  });
-
-  it("logs context target visibility updates", async () => {
-    const chromeApi = createFakeChrome();
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-
-    await setDownloadLinkContextMenuVisibility(chromeApi, "magnet:?xt=urn:btih:test");
-
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("Browser Downloader - context target updated"));
   });
 
   it("opens the add download page through the extension action popup for supported links", async () => {
@@ -144,16 +105,28 @@ describe("link context menu", () => {
     expect(chromeApi.tabs.create).not.toHaveBeenCalled();
   });
 
-  it("opens the content-script reported link when Chrome does not provide linkUrl", async () => {
+  it("opens magnet links through the extension action popup when Chrome provides linkUrl", async () => {
     const chromeApi = createFakeChrome();
     const linkUrl = "magnet:?xt=urn:btih:test";
 
-    await setDownloadLinkContextMenuVisibility(chromeApi, linkUrl);
-    await handleDownloadLinkContextMenuClick({ menuItemId: ADD_TO_DOWNLOAD_STATION_MENU_ID } as chrome.contextMenus.OnClickData, chromeApi);
+    await handleDownloadLinkContextMenuClick(
+      { menuItemId: ADD_TO_DOWNLOAD_STATION_MENU_ID, linkUrl } as chrome.contextMenus.OnClickData,
+      chromeApi
+    );
 
     const expectedPopup = `index.html?${new URLSearchParams({ view: "add", uri: linkUrl }).toString()}`;
     expect(chromeApi.action.setPopup).toHaveBeenNthCalledWith(1, { popup: expectedPopup });
     expect(chromeApi.action.openPopup).toHaveBeenCalledOnce();
+    expect(chromeApi.windows.create).not.toHaveBeenCalled();
+  });
+
+  it("ignores clicks when Chrome does not provide a supported linkUrl", async () => {
+    const chromeApi = createFakeChrome();
+
+    await handleDownloadLinkContextMenuClick({ menuItemId: ADD_TO_DOWNLOAD_STATION_MENU_ID } as chrome.contextMenus.OnClickData, chromeApi);
+
+    expect(chromeApi.action.openPopup).not.toHaveBeenCalled();
+    expect(chromeApi.windows.create).not.toHaveBeenCalled();
   });
 
   it("falls back to a popup window when the action popup cannot be opened", async () => {
