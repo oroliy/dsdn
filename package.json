@@ -15,6 +15,7 @@
     "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1",
     "version:sync": "node scripts/sync-manifest-version.mjs",
     "version:check": "node scripts/sync-manifest-version.mjs --check",
+    "release:check-tag": "node scripts/verify-release-tag.mjs",
     "publish:cws": "node scripts/publish-chrome-web-store.mjs"
   },
   "dependencies": {
