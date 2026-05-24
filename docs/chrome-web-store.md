@@ -36,6 +36,8 @@ Single purpose:
 
 - `storage`: Saves the DSM connection settings and the current Download Station session ID.
 - `contextMenus`: Adds a right-click link action that opens the extension add-download page with the selected link prefilled.
+- `alarms`: Periodically checks active Download Station tasks in the background.
+- `notifications`: Shows a browser notification when a known download task finishes.
 - `http://*/` and `https://*/`: Allows users to connect to a Synology DSM server at a LAN, VPN, hostname, or custom domain chosen at runtime.
 
 ## Privacy Disclosure

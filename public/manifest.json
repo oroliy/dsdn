@@ -11,24 +11,13 @@
     "service_worker": "assets/background.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "js": [
-        "assets/contentScript.js"
-      ],
-      "run_at": "document_start",
-      "all_frames": true
-    }
-  ],
   "permissions": [
+    "alarms",
     "contextMenus",
+    "notifications",
     "storage"
   ],
-  "host_permissions": [
+  "optional_host_permissions": [
     "http://*/",
     "https://*/"
   ],

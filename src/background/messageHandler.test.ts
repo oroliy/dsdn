@@ -16,6 +16,7 @@ describe("createMessageHandler", () => {
 
     expect(deps.storage.saveSettings).toHaveBeenCalledOnce();
     expect(deps.storage.clearSession).toHaveBeenCalledOnce();
+    expect(deps.storage.saveTaskCompletionStates).toHaveBeenCalledWith({});
   });
 
   it("routes task list responses", async () => {
@@ -91,7 +92,9 @@ function fakeDeps() {
       saveSession: vi.fn(async () => undefined),
       clearSession: vi.fn(async () => undefined),
       getLocale: vi.fn(async (): Promise<Locale | null> => null),
-      saveLocale: vi.fn(async () => undefined)
+      saveLocale: vi.fn(async () => undefined),
+      getTaskCompletionStates: vi.fn(async () => ({})),
+      saveTaskCompletionStates: vi.fn(async () => undefined)
     },
     session: {
       connect: vi.fn(async () => undefined),

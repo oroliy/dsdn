@@ -103,6 +103,8 @@ function fakeStorage(initialSession: { sid: string; createdAt: number } | null):
       currentSession = null;
     }),
     getLocale: vi.fn(async () => null),
-    saveLocale: vi.fn(async () => undefined)
+    saveLocale: vi.fn(async () => undefined),
+    getTaskCompletionStates: vi.fn(async () => ({})),
+    saveTaskCompletionStates: vi.fn(async () => undefined)
   };
 }

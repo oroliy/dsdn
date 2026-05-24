@@ -43,6 +43,14 @@ describe("createStorageAdapter", () => {
 
     await expect(storage.getLocale()).resolves.toBe("zh");
   });
+
+  it("saves and loads task completion states from local storage", async () => {
+    const storage = createStorageAdapter(fakeChromeStorage());
+
+    await storage.saveTaskCompletionStates({ task_1: "downloading", task_2: "finished" });
+
+    await expect(storage.getTaskCompletionStates()).resolves.toEqual({ task_1: "downloading", task_2: "finished" });
+  });
 });
 
 function fakeChromeStorage(): StorageRoot {

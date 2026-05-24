@@ -23,6 +23,7 @@ export function createMessageHandler(deps: { storage: StorageAdapter; session: S
         case "settings.save":
           await deps.storage.saveSettings(request.settings);
           await deps.storage.clearSession();
+          await deps.storage.saveTaskCompletionStates({});
           return ok(null);
         case "session.connect":
           await deps.session.connect();

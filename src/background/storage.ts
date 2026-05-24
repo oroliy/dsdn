@@ -1,8 +1,11 @@
-import type { ConnectionSettings, Locale, SessionState } from "../shared/types";
+import type { ConnectionSettings, DownloadTaskStatus, Locale, SessionState } from "../shared/types";
 
 const SETTINGS_KEY = "connectionSettings";
 const SESSION_KEY = "downloadStationSession";
 const LOCALE_KEY = "locale";
+const TASK_COMPLETION_STATES_KEY = "taskCompletionStates";
+
+export type TaskCompletionStates = Record<string, DownloadTaskStatus>;
 
 type StorageArea = {
   get(key: string): Promise<Record<string, unknown>>;
@@ -48,6 +51,15 @@ export function createStorageAdapter(storage: StorageRoot) {
 
     async saveLocale(locale: Locale): Promise<void> {
       await storage.local.set({ [LOCALE_KEY]: locale });
+    },
+
+    async getTaskCompletionStates(): Promise<TaskCompletionStates> {
+      const result = await storage.local.get(TASK_COMPLETION_STATES_KEY);
+      return (result[TASK_COMPLETION_STATES_KEY] as TaskCompletionStates | undefined) ?? {};
+    },
+
+    async saveTaskCompletionStates(states: TaskCompletionStates): Promise<void> {
+      await storage.local.set({ [TASK_COMPLETION_STATES_KEY]: states });
     }
   };
 }
