@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Synology Download Station",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "View and add Synology Download Station tasks from Chrome.",
   "action": {
     "default_popup": "index.html",
